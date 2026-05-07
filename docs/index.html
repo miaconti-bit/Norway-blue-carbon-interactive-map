@@ -20,7 +20,7 @@
       background: white;
       border-radius: 12px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.09);
-      max-width: 760px;
+      max-width: 780px;
       width: 100%;
       padding: 2.5rem 2.5rem 2rem;
     }
@@ -67,11 +67,74 @@
     }
     .btn-secondary:hover { background: #ebf8ff; }
     .section { margin-top: 2rem; }
-    .section h2 { font-size: 1.05rem; font-weight: 700; color: #2d3748; margin-bottom: 0.75rem; }
-    .layers { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1.5rem; }
-    .layer-item { font-size: 0.88rem; color: #4a5568; display: flex; align-items: baseline; gap: 0.4rem; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
-    .sq  { width: 10px; height: 10px; flex-shrink: 0; margin-top: 2px; }
+    .section h2 {
+      font-size: 1.0rem;
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .layers { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem 1.5rem; }
+    .layer-item {
+      font-size: 0.875rem;
+      color: #4a5568;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    /* Circle marker */
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.25);
+    }
+    /* Square marker */
+    .sq {
+      width: 10px; height: 10px;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.25);
+    }
+    /* Diamond marker (rotated square) */
+    .diamond {
+      width: 9px; height: 9px;
+      flex-shrink: 0;
+      transform: rotate(45deg);
+      border: 1px solid rgba(0,0,0,0.3);
+    }
+    /* Polygon swatch */
+    .poly {
+      width: 14px; height: 10px;
+      flex-shrink: 0;
+      border: 1.5px solid rgba(0,0,0,0.3);
+      border-radius: 2px;
+      opacity: 0.85;
+    }
+
+    /* Symbol legend */
+    .symbol-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: #4a5568;
+      margin-bottom: 0.35rem;
+    }
+    .symbol-label { font-weight: 600; color: #2d3748; }
+
+    /* Co-location table */
+    .coloc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.25rem; }
+    .coloc-table td { padding: 0.3rem 0.5rem; vertical-align: top; }
+    .coloc-table tr:nth-child(odd) td { background: #f7fafc; }
+    .coloc-swatch {
+      width: 12px; height: 12px;
+      display: inline-block;
+      flex-shrink: 0;
+      border-radius: 2px;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
     footer {
       margin-top: 2rem;
       font-size: 0.8rem;
@@ -80,7 +143,7 @@
       padding-top: 1.25rem;
     }
     footer a { color: #2b6cb0; text-decoration: none; }
-    @media (max-width: 500px) {
+    @media (max-width: 520px) {
       .card { padding: 1.5rem 1.25rem; }
       .layers { grid-template-columns: 1fr; }
     }
@@ -93,42 +156,102 @@
     <p class="subtitle">
       Interactive study-site map of Norwegian <strong>seagrass</strong> (<em>Zostera marina</em>) and
       <strong>kelp</strong> (<em>Saccharina latissima</em> and others) sampling locations, overlaid with
-      habitat polygons, marine protected areas, and human-pressure layers.
+      habitat polygons, marine protected areas, human-pressure layers, and sediment carbon data.
+      Built as part of the UC San Diego MAS CSP capstone in collaboration with
+      <a href="https://www.niva.no/en/projectweb/c-blues">C-BLUES / NIVA</a>.
     </p>
 
-    <a class="btn-primary" href="https://github.com/miaconti-bit/Norway-blue-carbon-interactive-map/releases/latest/download/norway.html">Open the map</a>
+    <a class="btn-primary" href="norway.html" target="_blank">Open the map</a>
     <a class="btn-secondary" href="https://github.com/miaconti-bit/Norway-blue-carbon-interactive-map">GitHub repo</a>
 
+    <!-- SITE SYMBOLS -->
     <div class="section">
-      <h2>Map layers</h2>
-      <div class="layers">
-        <div class="layer-item"><span class="dot" style="background:#FF6B35"></span>Kelp study sites</div>
-        <div class="layer-item"><span class="sq" style="background:#7B2FBE"></span>Seagrass study sites</div>
-        <div class="layer-item"><span class="dot" style="background:#31a354"></span>Eelgrass polygons (Naturbase HB19)</div>
-        <div class="layer-item"><span class="dot" style="background:#bf812d"></span>Kelp polygons (Naturbase HB19)</div>
-        <div class="layer-item"><span class="dot" style="background:#2c7fb8"></span>Marine protected areas</div>
-        <div class="layer-item"><span class="dot" style="background:#3182bd"></span>Aquaculture sites</div>
-        <div class="layer-item"><span class="dot" style="background:#756bb1"></span>EMODnet dredging</div>
-        <div class="layer-item"><span class="dot" style="background:#636363"></span>Offshore platforms</div>
-        <div class="layer-item"><span class="dot" style="background:#e6550d"></span>Bottom trawl effort</div>
-        <div class="layer-item"><span class="dot" style="background:#de2d26"></span>MASSIMAL field sites</div>
-        <div class="layer-item"><span class="dot" style="background:#41b6c4"></span>Windfarms</div>
-        <div class="layer-item"><span class="dot" style="background:#20B2AA"></span>Fish habitat projections</div>
+      <h2>Site symbols</h2>
+      <div class="symbol-row">
+        <span class="diamond" style="background:#FF6B35"></span>
+        <span class="symbol-label">Kelp / macroalgae</span> — orange diamond, size ∝ sample size <em>n</em>
+      </div>
+      <div class="symbol-row">
+        <span class="sq" style="background:#7B2FBE"></span>
+        <span class="symbol-label">Seagrass / eelgrass</span> — purple square, size ∝ number of cores
       </div>
     </div>
 
+    <!-- COLOUR MODES -->
     <div class="section">
-      <h2>Colour modes (switchable in map)</h2>
-      <p style="font-size:0.88rem; color:#4a5568; line-height:1.7;">
-        Ecosystem type · Canonical region (Barents Sea / Norwegian Sea / Oslofjord / Skagerrak) ·
-        Detailed region · Year sampled · Sediment C stock · Source study · Habitat type · Co-location class
+      <h2>Switchable colour modes <span style="font-weight:400;font-size:0.85rem;color:#718096">(top-right layer control)</span></h2>
+      <div class="layers">
+        <div class="layer-item">Ecosystem type <em style="font-size:0.8rem;color:#718096">(default)</em></div>
+        <div class="layer-item">Canonical region</div>
+        <div class="layer-item">Detailed region</div>
+        <div class="layer-item">Year sampled</div>
+        <div class="layer-item">Sediment C stock (seagrass)</div>
+        <div class="layer-item">Source study</div>
+        <div class="layer-item">Habitat type</div>
+      </div>
+      <p style="font-size:0.82rem;color:#718096;margin-top:0.6rem;">
+        Canonical regions: Barents Sea · Norwegian Sea · Oslofjord · Skagerrak (Gagnon et al. 2024)
       </p>
+    </div>
+
+    <!-- CO-LOCATION -->
+    <div class="section">
+      <h2>Co-location analysis <span style="font-weight:400;font-size:0.85rem;color:#718096">(always shown on habitat polygons)</span></h2>
+      <table class="coloc-table">
+        <tr>
+          <td><span class="coloc-swatch" style="background:#b2182b"></span></td>
+          <td><strong>Pressure nearby + &lt;1% protected</strong> — pressure signal within 5 km, minimal MPA overlap</td>
+        </tr>
+        <tr>
+          <td><span class="coloc-swatch" style="background:#fdae61"></span></td>
+          <td><strong>Pressure nearby + protected</strong> — pressure within 5 km and ≥10% MPA overlap</td>
+        </tr>
+        <tr>
+          <td><span class="coloc-swatch" style="background:#2b8cbe"></span></td>
+          <td><strong>Protected habitat</strong> — ≥10% MPA overlap, no nearby pressure</td>
+        </tr>
+        <tr>
+          <td><span class="coloc-swatch" style="background:#9ecae1"></span></td>
+          <td><strong>Study site within 5 km</strong> — mapped habitat with a study site nearby</td>
+        </tr>
+        <tr>
+          <td><span class="coloc-swatch" style="background:#d9d9d9"></span></td>
+          <td><strong>Evidence gap</strong> — no study site, pressure, or strong protection signal</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- TOGGLE LAYERS -->
+    <div class="section">
+      <h2>Toggleable overlay layers</h2>
+      <div class="layers">
+        <div class="layer-item"><span class="poly" style="background:#74c47688;border-color:#31a354"></span>Eelgrass polygons (Naturbase HB19)</div>
+        <div class="layer-item"><span class="poly" style="background:#bf812d88;border-color:#8c510a"></span>Kelp polygons (Naturbase HB19)</div>
+        <div class="layer-item"><span class="dot" style="background:#2c7fb8"></span>Protected areas (marine)</div>
+        <div class="layer-item"><span class="dot" style="background:#1a6099"></span>Protected areas (MPA subset)</div>
+        <div class="layer-item"><span class="dot" style="background:#3182bd"></span>Aquaculture register sites</div>
+        <div class="layer-item"><span class="dot" style="background:#756bb1"></span>EMODnet dredging</div>
+        <div class="layer-item"><span class="dot" style="background:#636363"></span>EMODnet offshore platforms</div>
+        <div class="layer-item"><span class="dot" style="background:#de2d26"></span>MASSIMAL remote-sensing sites</div>
+        <div class="layer-item"><span class="dot" style="background:#e6550d"></span>Bottom trawl effort (heatmap)</div>
+        <div class="layer-item"><span class="dot" style="background:#fd8d3c"></span>Bottom otter trawl effort</div>
+        <div class="layer-item"><span class="dot" style="background:#fdae6b"></span>Bottom seine effort</div>
+        <div class="layer-item"><span class="dot" style="background:#252525"></span>Offshore drilling</div>
+        <div class="layer-item"><span class="dot" style="background:#08519c"></span>Port vessel traffic</div>
+        <div class="layer-item"><span class="dot" style="background:#74c476"></span>Sedimentation rates</div>
+        <div class="layer-item"><span class="dot" style="background:#9ebcda"></span>Coastal resilience index</div>
+        <div class="layer-item"><span class="dot" style="background:#8B4513"></span>Seabed erosion areas</div>
+        <div class="layer-item"><span class="dot" style="background:#20B2AA"></span>Fish habitat projections (heatmap)</div>
+        <div class="layer-item"><span class="sq" style="background:#2ca02c55;border-color:#2ca02c"></span>Step 2: C stocks by region</div>
+        <div class="layer-item"><span class="poly" style="background:#6baed688;border-color:#2171b5"></span>NGU sediment OC stocks</div>
+        <div class="layer-item"><span class="poly" style="background:#9ecae188;border-color:#4292c6"></span>NGU OC accumulation rates</div>
+      </div>
     </div>
 
     <footer>
       Built by Mia Conti · UC San Diego MAS CSP Capstone 2025–26 ·
       <a href="https://www.niva.no/en/projectweb/c-blues">C-BLUES / NIVA</a><br/>
-      Data: Gagnon et al. 2024, Gundersen et al. 2021, EMODnet, Naturbase, Fiskeridirektoratet, MASSIMAL, SeaBee
+      Data: Gagnon et al. 2024 · Gundersen et al. 2021 · EMODnet · Naturbase · Fiskeridirektoratet · MASSIMAL · SeaBee · NGU
     </footer>
   </div>
 </body>
