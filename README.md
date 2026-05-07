@@ -16,7 +16,7 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | ■ square (orange) | Kelp site (size ∝ sample size *n*) |
 | ■ square (purple) | Seagrass site (size ∝ number of cores) |
 
-**Switchable colour layers** (top-right layer control):
+**Toggable point/ heatmap layers** (top-right layer control):
 
 - **Ecosystem type** — kelp (orange) vs seagrass (purple); default view
 - **Canonical region** — Barents Sea / Norwegian Sea / Oslofjord / Skagerrak (Gagnon et al. 2024 scheme)
@@ -37,15 +37,14 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | Aquaculture register sites | Fiskeridirektoratet (Barentswatch API) |
 | EMODnet dredging records | EMODnet Human Activities |
 | EMODnet offshore platforms | EMODnet Human Activities |
-| EMODnet windfarms | EMODnet Human Activities |
 | MASSIMAL remote-sensing field sites | MASSIMAL GitHub catalogue |
 | Bottom trawl / otter trawl / seine effort | ICES fishing effort grid |
 | Offshore drilling installations | Norwegian Offshore Directorate |
 | Port vessel traffic | EMODnet / Barentswatch |
-| Sedimentation rate sites | EMODnet |
-| Coastal resilience/vulnerability index | EMODnet |
-| Seabed erosion areas | EMODnet |
-| Fish habitat suitability (climate projection) | EMODnet |
+| Sedimentation rates | EMODnet Geology |
+| Coastal resilience/vulnerability index | EMODnet Geology|
+| Seabed erosion areas | EMODnet Geology|
+| Fish habitat suitability (climate projection) | EMODnet Biology|
 
 **Co-location classes** (spatial analysis layer):
 
@@ -56,6 +55,11 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | Protected habitat | ≥10 % MPA overlap, no nearby pressure |
 | Study site within 5 km | Mapped habitat near an existing study site |
 | Mapped habitat / evidence gap | No pressure, study site, or strong protection signal |
+| Step 2: Carbon stocks by region | Canonical regions per Gagnon et al 2024 |
+| NGU: Sediment OC stocks – North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
+| NGU: Sediment OC stocks – Norwegian shelf | Norges geologiske undersøkelse (NGU) |
+| NGU: OC accumulation rates – North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
+| NGU: OC accumulation rates – Norwegian shelf | Norges geologiske undersøkelse (NGU) |
 
 ---
 
