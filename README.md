@@ -1,6 +1,6 @@
 # Norway Blue Carbon Map
 
-An interactive study-site map of **Norwegian seagrass (*Zostera marina*) and kelp (*Saccharina latissima* and others)** sampling locations, overlaid with habitat polygons, marine protected areas, and human-pressure layers.
+An interactive study-site map of **Norwegian seagrass (*Zostera marina*) and kelp (*Saccharina latissima* and others)** sampling locations, overlaid with habitat polygons, marine protected areas, environmental drivers, carbon stock/ accumulation, and human-pressure layers.
 
 Built as part of the UC San Diego MAS CSP capstone project:
 > *"Roadmap for Norwegian Blue Carbon Ecosystems as Nature-Based Solutions: Science-to-Policy Pathway Evaluation for Seagrass and Macroalgae Systems"* — Mia Conti (2025–26), in collaboration with the [C-BLUES project](https://www.c-blues.eu/) / NIVA (https://www.niva.no/en).
