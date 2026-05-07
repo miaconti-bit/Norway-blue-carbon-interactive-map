@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Norway Blue Carbon Map</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.09);
+      max-width: 760px;
+      width: 100%;
+      padding: 2.5rem 2.5rem 2rem;
+    }
+    .badge {
+      display: inline-block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    h1 { font-size: 1.85rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.25; }
+    .subtitle { color: #4a5568; font-size: 1rem; margin-bottom: 1.75rem; line-height: 1.6; }
+    .btn-primary {
+      display: inline-block;
+      background: #2b6cb0;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.75rem 1.75rem;
+      border-radius: 8px;
+      transition: background 0.2s;
+      margin-right: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .btn-primary:hover { background: #2c5282; }
+    .btn-secondary {
+      display: inline-block;
+      background: white;
+      color: #2b6cb0;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.72rem 1.75rem;
+      border-radius: 8px;
+      border: 2px solid #2b6cb0;
+      transition: background 0.2s;
+      margin-bottom: 0.75rem;
+    }
+    .btn-secondary:hover { background: #ebf8ff; }
+    .section { margin-top: 2rem; }
+    .section h2 { font-size: 1.05rem; font-weight: 700; color: #2d3748; margin-bottom: 0.75rem; }
+    .layers { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1.5rem; }
+    .layer-item { font-size: 0.88rem; color: #4a5568; display: flex; align-items: baseline; gap: 0.4rem; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+    .sq  { width: 10px; height: 10px; flex-shrink: 0; margin-top: 2px; }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: #718096;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 1.25rem;
+    }
+    footer a { color: #2b6cb0; text-decoration: none; }
+    @media (max-width: 500px) {
+      .card { padding: 1.5rem 1.25rem; }
+      .layers { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">C-BLUES · Blue Carbon · Norway</div>
+    <h1>Norway Blue Carbon Map</h1>
+    <p class="subtitle">
+      Interactive study-site map of Norwegian <strong>seagrass</strong> (<em>Zostera marina</em>) and
+      <strong>kelp</strong> (<em>Saccharina latissima</em> and others) sampling locations, overlaid with
+      habitat polygons, marine protected areas, and human-pressure layers.
+    </p>
+
+    <a class="btn-primary" href="norway.html">Open the map</a>
+    <a class="btn-secondary" href="https://github.com/YOUR-USERNAME/norway-blue-carbon-map">GitHub repo</a>
+
+    <div class="section">
+      <h2>Map layers</h2>
+      <div class="layers">
+        <div class="layer-item"><span class="dot" style="background:#FF6B35"></span>Kelp study sites</div>
+        <div class="layer-item"><span class="sq" style="background:#7B2FBE"></span>Seagrass study sites</div>
+        <div class="layer-item"><span class="dot" style="background:#31a354"></span>Eelgrass polygons (Naturbase HB19)</div>
+        <div class="layer-item"><span class="dot" style="background:#bf812d"></span>Kelp polygons (Naturbase HB19)</div>
+        <div class="layer-item"><span class="dot" style="background:#2c7fb8"></span>Marine protected areas</div>
+        <div class="layer-item"><span class="dot" style="background:#3182bd"></span>Aquaculture sites</div>
+        <div class="layer-item"><span class="dot" style="background:#756bb1"></span>EMODnet dredging</div>
+        <div class="layer-item"><span class="dot" style="background:#636363"></span>Offshore platforms</div>
+        <div class="layer-item"><span class="dot" style="background:#e6550d"></span>Bottom trawl effort</div>
+        <div class="layer-item"><span class="dot" style="background:#de2d26"></span>MASSIMAL field sites</div>
+        <div class="layer-item"><span class="dot" style="background:#41b6c4"></span>Windfarms</div>
+        <div class="layer-item"><span class="dot" style="background:#20B2AA"></span>Fish habitat projections</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Colour modes (switchable in map)</h2>
+      <p style="font-size:0.88rem; color:#4a5568; line-height:1.7;">
+        Ecosystem type · Canonical region (Barents Sea / Norwegian Sea / Oslofjord / Skagerrak) ·
+        Detailed region · Year sampled · Sediment C stock · Source study · Habitat type · Co-location class
+      </p>
+    </div>
+
+    <footer>
+      Built by Mia Conti · UC San Diego MAS CSP Capstone 2025–26 ·
+      <a href="https://www.niva.no/en/projectweb/c-blues">C-BLUES / NIVA</a><br/>
+      Data: Gagnon et al. 2024, Gundersen et al. 2021, EMODnet, Naturbase, Fiskeridirektoratet, MASSIMAL, SeaBee
+    </footer>
+  </div>
+</body>
+</html>

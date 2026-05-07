@@ -1,0 +1,7 @@
+ecosystem,seq_mt_co2_yr,price_scenario,price_per_tco2,currency,annual_value_million_usd
+seagrass,0.0168,EU_ETS_2024_EUR_tCO2,65.0,EUR,1.18
+seagrass,0.0168,SCC_US_2023_USD_tCO2,190.0,USD,3.2
+seagrass,0.0168,VCM_blue_carbon_USD_tCO2,20.0,USD,0.34
+macroalgae,1.6867,EU_ETS_2024_EUR_tCO2,65.0,EUR,118.4
+macroalgae,1.6867,SCC_US_2023_USD_tCO2,190.0,USD,320.47
+macroalgae,1.6867,VCM_blue_carbon_USD_tCO2,20.0,USD,33.73

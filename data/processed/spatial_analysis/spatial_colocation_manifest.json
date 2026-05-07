@@ -1,0 +1,30 @@
+{
+  "projection_for_area_distance": "EPSG:32633",
+  "buffer_distances_m": [
+    1000,
+    5000,
+    10000
+  ],
+  "inputs": {
+    "eelgrass": "data/external/naturbase_hb19/map_layers/naturbase_hb19_alegras_map.geojson",
+    "kelp": "data/external/naturbase_hb19/map_layers/naturbase_hb19_tare_map.geojson",
+    "protected": "data/external/verneomraader/map_layers/verneomraader_marine_map.geojson",
+    "mpa": "data/external/verneomraader/map_layers/verneomraader_mpa_map.geojson",
+    "dredging": "data/external/emodnet/emodnet_dredging.csv",
+    "akvakultur": "data/external/akvakultur/akvakultur_marine_sites.csv",
+    "platforms": "data/external/emodnet/emodnet_platforms.csv",
+    "windfarms": "data/external/emodnet/emodnet_windfarms.csv",
+    "study_sites": "data/processed/norway_blue_carbon_master_sites.csv"
+  },
+  "outputs": {
+    "habitat_colocation_metrics": "data/processed/spatial_analysis/habitat_colocation_metrics.csv",
+    "habitat_protection_overlaps": "data/processed/spatial_analysis/habitat_protection_overlaps.csv",
+    "study_site_habitat_join": "data/processed/spatial_analysis/study_site_habitat_join.csv",
+    "regional_colocation_summary": "data/processed/spatial_analysis/regional_colocation_summary.csv"
+  },
+  "notes": [
+    "Pressure index is a transparent screening score, not an ecological impact model.",
+    "Exact overlap with point pressure data is avoided; buffer counts and nearest distances are more informative.",
+    "Canonical regions are approximated from habitat polygon centroid latitude where source region is absent."
+  ]
+}

@@ -1,0 +1,44 @@
+co_benefit,metric,value,uncertainty,unit,geographic_scope,year,data_source,data_quality,norway_specific,notes
+Biodiversity,Norwegian Nature Index — coastal waters (NI score),0.766,SD = 0.011,index (0–1),National,2024.0,NINA / Naturindeks 2025,high — national monitoring programme,True,Score of 1 = reference (undisturbed) state; 0.766 indicates moderate condition
+Biodiversity,Infaunal species richness — eelgrass vs unvegetated,,,qualitative,Skagerrak / W Norway sites,,Boström et al. 2014 (cited in roadmap),medium — site-level comparison,True,Eelgrass supports higher infaunal diversity than unvegetated sediments at Norwegian sites
+Fisheries / nursery habitat,"Eelgrass nursery function for juvenile cod, flatfish",,,qualitative,Norway / Nordic,,Literature (global/Nordic),low — no Norway-specific quantification,False,No Norwegian study quantifies fish biomass or yield attributable to eelgrass area
+Coastal protection,Wave attenuation by eelgrass canopy,,,qualitative,Global literature,,Ondiviela et al. 2014; Infantes et al. 2022,low — no Norway-specific measurement,False,No Norwegian empirical quantification of coastal protection by eelgrass. Root/rhizome sediment stabilization well-established globally.
+Economic valuation (blue carbon),Annual value of seagrass carbon sequestration (EU ETS),,,million USD yr⁻¹,National,2024.0,Derived — EU ETS 2024 price × sequestration estimate,"medium — price is market rate, sequestration is Tier 2",True,See step2_valuation.csv for full price-scenario breakdown
+Biodiversity — NI indicator,Alke,1.0,"q025=0.847, q975=1.0",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Berggylte,0.376,"q025=0.2237, q975=0.5363",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Blåskjell,0.6773,"q025=0.6623, q975=0.6945",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Bløtbunn artsmangfold fauna kyst,0.7874,"q025=0.7823, q975=0.7932",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,blue_carbon_relevant
+Biodiversity — NI indicator,Bløtbunn eutrofiindeks,0.8058,"q025=0.8025, q975=0.8093",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,blue_carbon_relevant
+Biodiversity — NI indicator,Dyreplankton artssammensetning,0.8669,"q025=0.8274, q975=0.9026",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Fiskemåke kyst,0.8881,"q025=0.8819, q975=0.8938",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Gråmåke,0.4136,"q025=0.2562, q975=0.6029",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Grønngylte,0.5765,"q025=0.3732, q975=0.7558",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Hardbunn vegetasjon algeindeks,0.7611,"q025=0.7564, q975=0.7663",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,blue_carbon_relevant
+Biodiversity — NI indicator,Hardbunn vegetasjon nedre voksegrense,0.7633,"q025=0.7592, q975=0.7676",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,blue_carbon_relevant
+Biodiversity — NI indicator,Havelle,0.6973,"q025=0.2884, q975=0.9834",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Havhest,0.2696,"q025=0.0258, q975=0.6938",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Havørn,0.8272,"q025=0.639, q975=0.936",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Hyse,0.9571,"q025=0.9413, q975=0.9743",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Krykkje,0.3625,"q025=0.2623, q975=0.4715",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Kveite,0.8576,"q025=0.3181, q975=1.0",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Laks - kyst og elver,0.4748,"q025=0.4203, q975=0.5368",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Lange,0.9917,"q025=0.984, q975=0.9991",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Lomvi,0.5413,"q025=0.2239, q975=1.0",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Lunde,0.2906,"q025=0.2042, q975=0.3802",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Makrell,0.9436,"q025=0.6665, q975=1.0",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Makrellterne,0.3222,"q025=0.2395, q975=0.4105",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Oter kystbestand,0.948,"q025=0.9468, q975=0.9492",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Planteplankton (Chl a),0.8171,"q025=0.8136, q975=0.8214",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,blue_carbon_relevant
+Biodiversity — NI indicator,Rødnebbterne,0.4335,"q025=0.2317, q975=0.5298",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Sei,0.9446,"q025=0.9169, q975=0.9719",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Siland,0.7827,"q025=0.3708, q975=1.0",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Sildemåke,0.3215,"q025=0.2415, q975=0.3938",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Storjo,1.0,"q025=1.0, q975=1.0",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Storskarv ssp carbo,0.7927,"q025=0.6837, q975=0.8794",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Svartand,0.7936,"q025=0.6021, q975=0.9697",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Svartbak,0.6747,"q025=0.38, q975=0.7655",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Svartkutling,1.0,"q025=0.9177, q975=1.0",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Toppskarv,0.262,"q025=0.1775, q975=0.7163",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Ål,0.1879,"q025=0.0515, q975=0.3384",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Ærfugl,0.5802,"q025=0.5109, q975=0.651",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem
+Biodiversity — NI indicator,Øyepål,0.2547,"q025=0.1209, q975=0.38",scaled index (0–1),National,2024.0,NINA / Naturindeks 2025,high,True,coastal_ecosystem

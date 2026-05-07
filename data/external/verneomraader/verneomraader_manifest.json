@@ -1,0 +1,15 @@
+{
+  "source_name": "Miljødirektoratet Verneområder",
+  "service_url": "https://kart.miljodirektoratet.no/arcgis/rest/services/vern/MapServer",
+  "layer_id": 0,
+  "where_clause": "majorEcosystemType IN ('Marin','MarinOgTerrestrisk')",
+  "downloaded_at_utc": "2026-05-06T04:23:57.918025+00:00",
+  "license": "Norsk lisens for offentlege data (NLOD)",
+  "feature_count": 884,
+  "marine_relevant_count": 884,
+  "mpa_count": 18,
+  "outputs": {
+    "geojson": "data/external/verneomraader/verneomraader_all.geojson",
+    "csv": "data/external/verneomraader/verneomraader_features.csv"
+  }
+}

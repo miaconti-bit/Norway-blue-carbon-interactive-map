@@ -1,0 +1,30 @@
+{
+  "source_name": "SeaBee GeoNode",
+  "api_base": "https://geonode.seabee.sigma2.no/api/v2",
+  "downloaded_at_utc": "2026-05-06T05:17:21.655024+00:00",
+  "license": "SeaBee — check individual dataset licenses",
+  "total_datasets": 5210,
+  "relevant_datasets": 4168,
+  "relevant_terms": [
+    "classification",
+    "eelgrass",
+    "habitat",
+    "kelp",
+    "laminaria",
+    "macroalgae",
+    "makroalge",
+    "mapping",
+    "saccharina",
+    "seagrass",
+    "tare",
+    "zostera",
+    "ålegras",
+    "ålegraseng"
+  ],
+  "downloaded_vectors": [],
+  "outputs": {
+    "full_catalog": "data/external/seabee/seabee_full_catalog.csv",
+    "relevant_catalog": "data/external/seabee/seabee_relevant_catalog.csv"
+  },
+  "note": "SeaBee GeoNode search param does not filter server-side; relevance filtering applied client-side on title/abstract/keywords. Raster datasets (drone orthophotos) are cataloged only."
+}

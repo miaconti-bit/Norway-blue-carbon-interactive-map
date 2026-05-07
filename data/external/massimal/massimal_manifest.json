@@ -1,0 +1,34 @@
+{
+  "source_name": "MASSIMAL (UiT The Arctic University of Norway)",
+  "github_users_queried": [
+    "mh-skjelvareid",
+    "massimal-project"
+  ],
+  "downloaded_at_utc": "2026-05-06T04:44:42.095686+00:00",
+  "license": "MASSIMAL — check individual repository/dataset licenses",
+  "total_repos": 13,
+  "relevant_repos": 1,
+  "known_field_sites": {
+    "Bodø": [
+      67.28,
+      14.38
+    ],
+    "Vega": [
+      65.67,
+      11.93
+    ],
+    "Smøla": [
+      63.37,
+      8.03
+    ],
+    "Larvik": [
+      59.05,
+      10.03
+    ]
+  },
+  "outputs": {
+    "repos_json": "data/external/massimal/massimal_repos.json",
+    "catalog_csv": "data/external/massimal/massimal_catalog.csv"
+  },
+  "note": "Actual hyperspectral datasets are large and require case-by-case access. See individual repo README files and contact UiT for data access. Field sites: Bodø, Vega, Smøla, Larvik — relevant for seagrass and kelp mapping."
+}

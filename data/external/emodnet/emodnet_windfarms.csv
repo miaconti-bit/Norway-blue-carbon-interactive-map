@@ -1,0 +1,86 @@
+country,name,n_turbines,power_mw,status,type_inst,updateyear,year,dist_coast,notes,lon_dd,lat_dd
+Finland,Ajos 1,1,3,Dismantled,,2025,2005,14.5966830835,Decommission: 2016,24.56,65.658
+Finland,Ajos 2-3,2,6,Dismantled,,2025,2008,617.84155917,Decommission: 2016,24.5,65.667
+Finland,Ajos 4,1,3,Dismantled,,2025,2008,53.0401498407,Decommission: 2016,24.551,65.658
+Finland,Ajos 5,1,3,Dismantled,,2025,2007,627.514721705,Decommission: 2016,24.563,65.65
+Finland,Ajos 6-7,2,6,Dismantled,,2025,2008,53.0401498407,Decommission: 2016,24.551,65.658
+Finland,Ajos 8-9-10-11,4,12,Dismantled,,2025,2008,53.0401498407,Decommission: 2016,24.551,65.658
+Finland,Ajos Repowering Offshore Part,8,26.4,Production,,2025,2017,787.926465333,,24.545,65.668
+Finland,Ajos Repowering Onshore Part,5,16,Production,,2025,2017,787.926465333,,24.545,65.668
+Finland,Pori Offshore 1 Reposaaren Tuulipuisto,1,2.3,Production,,2025,2010,918.375059946,,21.35,61.62
+Finland,Pori-Tahkoluoto Pori 2,10,42,Production,,2025,2017,5511.38505116,,21.26,61.608
+Sweden,SeaTwirl 3MW,1,3,Dismantled,,2025,2011,3153.88176936,Decommission: 2019,11.3,58.25
+Sweden,Vänern,7,0.021,Production,,2024,2009,113427.734942,,13.378,59.265
+Sweden,Vänern Gasslingegrund Offshore,7,21,Production,,2025,2009,113427.734941,,13.378,59.265
+Estonia,Loode-Eesti Meretuulepark Hiiumaa,200,1100,Planned,,2024,,8027.17115278,,22.5,59.15
+Estonia,Saare,100,600,Planned,,2024,,17436.6770094,,21.67,58.14
+Finland,Inkoo Inkoo-Raaseporin,60,300,Planned,,2024,,4411.25466507,,23.89,59.86
+Finland,Raahe Maanahkiaisen,70,350,Planned,,2024,,8449.56907721,,24.09,64.58
+Finland,Raahe Pertunmatala,24,72,Planned,,2024,,7455.99153798,,24.4,64.78
+Finland,Tahkoluoto demonstration,2,30,Approved,,2024,,4185.06674236,,21.3,61.71
+Finland,Ulkonahkiainen,70,210,Planned,,2024,,17882.3365362,,23.89,64.61
+Finland,Vagskär,98,1960,Planned,,2024,,33035.5801956,,19.74,60.75
+Finland,Halla,,1920,Planned,,2024,,33096.2547617,,23.85,65.03
+Denmark,Bochers Banke,,1102.5,Planned,,2024,,17145.5506181,,11.36,57.45
+Denmark,Frederikshavn Nord,,500,Planned,,2024,,5195.7595305,,10.65,57.68
+Denmark,Freya,,1500,Planned,,2024,,60389.9591091,,7.54,57.27
+Denmark,Hanstholm Syd,,500,Planned,,2024,,15722.17106,,8.35,57.18
+Denmark,Hirtshals Havn Offshore,,350,Planned,,2024,,4444.27710821,,9.88,57.61
+Denmark,Hirtshals Havn Syd,,500,Planned,,2024,,7209.97316457,,9.76,57.55
+Denmark,Laeso,,540,Planned,,2024,,12084.0242744,,11.4,57.32
+Denmark,Thybo,,4000,Planned,,2024,,115086.01864,,6.1,57.07
+Denmark,Thybo II,,1760,Planned,,2024,,45544.1360208,,7.86,57.28
+Denmark,Vigso Bay,,450,Planned,,2024,,5189.60983377,,8.65,57.17
+Estonia,Area 1 - Eesti Energia,,1005,Planned,,2024,,12277.0776112,,24.19,57.98
+Estonia,Area 2 - Eesti Energia,,1005,Planned,,2024,,13651.727171,,24.01,57.97
+Estonia,ELWIND,,1000,Planned,,2024,,10812.7115978,,23.82,58.04
+Estonia,European Energy Estonia OÜ Area SaareWest,,1000,Planned,,2024,,36846.353695,,21.25,58.13
+Estonia,Liivi Iaht Kihnu,,960,Planned,,2024,,13628.2809003,,23.98,57.97
+Estonia,Sõrve,,1200,Planned,,2024,,17087.5982864,,21.74,58.06
+Estonia,Sõrve 2,,1200,Planned,,2024,,15059.8275455,,21.73,57.94
+Estonia,Sunly SW1,,84,Planned,,2024,,19392.6923229,,22.09,59.12
+Estonia,Sunly SW10,,72,Planned,,2024,,25851.3314469,,21.61,57.83
+Estonia,Sunly SW11,,108,Planned,,2024,,27920.9754144,,21.37,58.18
+Estonia,Sunly SW12,,72,Planned,,2024,,23116.202088,,21.41,58.23
+Estonia,Sunly SW13,,72,Planned,,2024,,23116.202088,,21.41,58.23
+Estonia,Sunly SW2,,114,Planned,,2024,,15080.9390995,,21.96,59.07
+Estonia,Sunly SW3,,144,Planned,,2024,,15706.9935603,,21.77,58.95
+Estonia,Sunly SW4,,132,Planned,,2024,,11615.1980602,,21.84,58.91
+Estonia,Sunly SW5,,84,Planned,,2024,,11157.1063667,,21.87,58.14
+Estonia,Sunly SW6,,492,Planned,,2024,,13029.0203096,,21.6,58.24
+Estonia,Sunly SW7,,252,Planned,,2024,,20115.3981195,,21.43,58.28
+Estonia,Sunly SW8,,120,Planned,,2024,,25473.222339,,21.42,58.18
+Estonia,Sunly SW9,,120,Planned,,2024,,32967.488938,,21.26,58.19
+Estonia,Tuuletraal,,1050,Planned,,2024,,31280.1643536,,23.34,58.11
+Finland,Kemi Ajos III Kemin Ajoksen III,,189,Planned,,2024,,1272.29550847,,24.51,65.64
+Finland,Laine,,1800,Planned,,2024,,31855.1291702,,21.84,63.79
+Finland,Navakka,,1500,Planned,,2024,,32683.5845777,,20.69,61.8
+Finland,Noatun Syd,,3000,Planned,,2024,,14040.4197892,,20.49,59.71
+Finland,Norrskar,,1550,Planned,,2024,,37726.7213514,,20.31,62.67
+Finland,Pooki,,2000,Planned,,2024,,11969.3473686,,24.61,65.28
+Finland,Reimari,,3600,Planned,,2024,,32691.1666942,,21.82,63.79
+Finland,Tyrsky,,1400,Planned,,2024,,13064.9004441,,20.8,62.53
+Finland,Voima,,1500,Planned,,2024,,32503.2747235,,21.92,63.86
+Finland,Wellamo,,2000,Planned,,2024,,16579.7709173,,21.03,61.6
+Sweden,Gävle West,,4000,Planned,,2025,,49019.6333138,,18.23,61.09
+Sweden,Heimdall,,2400,Planned,,2025,,29116.8260653,,10.55,58.67
+Sweden,Hudiksvall,,1500,Planned,,2025,,31104.8187841,,18.04,61.49
+Sweden,Lulea-Kalix I,,1200,Planned,,2025,,43484.7499156,,23.07,65.05
+Sweden,Lulea-Kalix II,,1800,Planned,,2025,,30164.4906744,,23.3,65.27
+Sweden,Oxelösund,,600,Planned,,2025,,12931.7260432,,17.64,58.55
+Sweden,Sotenäs Offshore Park,,10,Planned,,2025,,2895.27271632,,11.14,58.38
+Sweden,Stenkalles grund,,100,Approved,,2025,,108448.792617,,13.31,59.22
+Sweden,Simpevarp,,800,Planned,,2025,,13720.6440172,,17.35,57.38
+Sweden,Anemone,,,Planned,,2025,,16577.953581,,17.26,57.49
+Estonia,Nasva Offshore,,,Planned,,2024,,984.087018805,,22.49,58.21
+Estonia,Saaremaa Roheenergia,,,Planned,,2024,,34021.5794805,,21.24,58.19
+Finland,Korsnäs - Forststyrelsen,,,Planned,,2024,,15298.4918195,,20.77,62.79
+Finland,Pori-Tahkoluoto Extension,,,Planned,,2024,,4409.46739564,,21.26,61.67
+Sweden,Langgrund,,,Planned,,2024,,5268.06642789,,17.67,58.65
+Sweden,Langgrund II,,,Planned,,2024,,8452.40325419,,17.34,58.51
+Sweden,Norra Klasgrunden,,,Planned,,2025,,2976.36519003,,17.12,58.61
+Sweden,Södra Klasgrunden,,,Planned,,2025,,3699.63603462,,17.11,58.58
+Sweden,Väktaren,,,Planned,,2025,,4731.6803199,,20.73,63.55
+Sweden,Auramaris,,,Planned,,2025,,35225.396565,,18.02,61.37
+Sweden,Bylgia,,,Planned,,2025,,30974.74592,,21.64,63.83
+Sweden,Ostanvind,,,Planned,,2025,,37849.2447518,,18.47,62.22

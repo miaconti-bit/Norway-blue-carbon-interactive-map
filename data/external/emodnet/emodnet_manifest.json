@@ -1,0 +1,36 @@
+{
+  "source_name": "EMODnet Human Activities WFS",
+  "wfs_version": "2.0.0",
+  "wfs_base": "https://ows.emodnet-humanactivities.eu/geoserver/emodnet/ows",
+  "downloaded_at_utc": "2026-05-06T04:35:35.077819+00:00",
+  "license": "EMODnet Human Activities — free for non-commercial use with attribution",
+  "bbox": [
+    4.0,
+    57.0,
+    31.0,
+    72.0
+  ],
+  "layers": [
+    {
+      "key": "dredging",
+      "wfs_layer": "emodnet:dredging",
+      "feature_count": 9411,
+      "geojson": "data/external/emodnet/emodnet_dredging.geojson",
+      "csv": "data/external/emodnet/emodnet_dredging.csv"
+    },
+    {
+      "key": "platforms",
+      "wfs_layer": "emodnet:platforms",
+      "feature_count": 196,
+      "geojson": "data/external/emodnet/emodnet_platforms.geojson",
+      "csv": "data/external/emodnet/emodnet_platforms.csv"
+    },
+    {
+      "key": "windfarms",
+      "wfs_layer": "emodnet:windfarms",
+      "feature_count": 85,
+      "geojson": "data/external/emodnet/emodnet_windfarms.geojson",
+      "csv": "data/external/emodnet/emodnet_windfarms.csv"
+    }
+  ]
+}

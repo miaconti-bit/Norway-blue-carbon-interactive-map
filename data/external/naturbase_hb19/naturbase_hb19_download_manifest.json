@@ -1,0 +1,23 @@
+{
+  "source_name": "Naturbase Marine naturtyper (HB19)",
+  "service_url": "https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_marine_hb19/MapServer",
+  "downloaded_at_utc": "2026-05-06T04:12:33.813132+00:00",
+  "license": "Norsk lisens for offentlege data (NLOD)",
+  "layers": [
+    {
+      "layer_key": "alegras",
+      "layer_id": 7,
+      "arcgis_layer_name": "naturtype_marin_hb19_alegras",
+      "feature_count": 4343,
+      "geojson_path": "data/external/naturbase_hb19/naturbase_hb19_alegras.geojson"
+    },
+    {
+      "layer_key": "tare",
+      "layer_id": 1,
+      "arcgis_layer_name": "naturtype_marin_hb19_tare",
+      "feature_count": 7243,
+      "geojson_path": "data/external/naturbase_hb19/naturbase_hb19_tare.geojson"
+    }
+  ],
+  "feature_index_csv": "data/external/naturbase_hb19/naturbase_hb19_features.csv"
+}

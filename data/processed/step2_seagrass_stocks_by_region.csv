@@ -1,0 +1,5 @@
+canonical_region,n_sites,mean_stock_g_m2,sd_stock_g_m2,min_stock_g_m2,max_stock_g_m2,ecosystem
+Barents Sea,1,112.48,,112.48,112.48,seagrass
+Norwegian Sea,1,4000.0,,4000.0,4000.0,seagrass
+Oslofjord,6,5005.23,1825.5189754258927,3187.99,7225.18,seagrass
+Skagerrak,12,3776.974166666667,3548.2563433978216,211.52,9420.29,seagrass

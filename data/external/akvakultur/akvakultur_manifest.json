@@ -1,0 +1,13 @@
+{
+  "source_name": "Fiskeridirektoratet Akvakulturregisteret",
+  "download_url": "https://api.fiskeridir.no/pub-aqua/api/v1/dump/new-legacy-csv-file",
+  "downloaded_at_utc": "2026-05-06T04:30:10.299337+00:00",
+  "license": "Norsk lisens for offentlege data (NLOD)",
+  "total_records": 26698,
+  "marine_cage_records": 326,
+  "outputs": {
+    "raw_csv": "data/external/akvakultur/akvakulturregisteret_raw.csv",
+    "marine_csv": "data/external/akvakultur/akvakultur_marine_sites.csv"
+  },
+  "note": "Coordinate columns normalized from comma to period decimal; lat_dd/lon_dd added."
+}
