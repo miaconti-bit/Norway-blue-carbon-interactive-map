@@ -16,7 +16,16 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | ■ square (orange) | Kelp site (size ∝ sample size *n*) |
 | ■ square (purple) | Seagrass site (size ∝ number of cores) |
 
-**Toggable point/ heatmap layers** (top-right layer control):
+**Co-location classes** (spatial analysis layer):
+| Class | Meaning |
+|---|---|
+| Pressure nearby + <1 % protected | Pressure signal within 5 km and almost no MPA overlap |
+| Pressure nearby + protected | Pressure within 5 km with ≥10 % MPA overlap |
+| Protected habitat | ≥10 % MPA overlap, no nearby pressure |
+| Study site within 5 km | Mapped habitat near an existing study site |
+| Mapped habitat / evidence gap | No pressure, study site, or strong protection signal |
+
+**Toggable layers** (top-right layer control):
 
 - **Ecosystem type** — kelp (orange) vs seagrass (purple); default view
 - **Canonical region** — Barents Sea / Norwegian Sea / Oslofjord / Skagerrak (Gagnon et al. 2024 scheme)
@@ -25,7 +34,6 @@ Built as part of the UC San Diego MAS CSP capstone project:
 - **Sediment C stock** — seagrass-only signal (mg C cm⁻³)
 - **Source study** — colour by citation
 - **Habitat type**
-- **Co-location class** — pressure + protection overlap signal (see below)
 
 **Additional toggleable layers:**
 
@@ -45,16 +53,6 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | Coastal resilience/vulnerability index | EMODnet Geology|
 | Seabed erosion areas | EMODnet Geology|
 | Fish habitat suitability (climate projection) | EMODnet Biology|
-
-**Co-location classes** (spatial analysis layer):
-
-| Class | Meaning |
-|---|---|
-| Pressure nearby + <1 % protected | Pressure signal within 5 km and almost no MPA overlap |
-| Pressure nearby + protected | Pressure within 5 km with ≥10 % MPA overlap |
-| Protected habitat | ≥10 % MPA overlap, no nearby pressure |
-| Study site within 5 km | Mapped habitat near an existing study site |
-| Mapped habitat / evidence gap | No pressure, study site, or strong protection signal |
 | Step 2: Carbon stocks by region | Canonical regions per Gagnon et al 2024 |
 | NGU: Sediment OC stocks – North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
 | NGU: Sediment OC stocks – Norwegian shelf | Norges geologiske undersøkelse (NGU) |
