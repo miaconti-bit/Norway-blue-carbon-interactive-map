@@ -5,8 +5,7 @@ An interactive study-site map of **Norwegian seagrass (*Zostera marina*) and kel
 Built as part of the UC San Diego MAS CSP capstone project:
 > *"Roadmap for Norwegian Blue Carbon Ecosystems as Nature-Based Solutions: Science-to-Policy Pathway Evaluation for Seagrass and Macroalgae Systems"* — Mia Conti (2025–26), in collaboration with the [C-BLUES project](https://www.niva.no/en/projectweb/c-blues) / NIVA.
 
-**Live map → [view on GitHub Pages](https://YOUR-USERNAME.github.io/norway-blue-carbon-map/)**
-*(replace `YOUR-USERNAME` with your GitHub handle after publishing)*
+**Live map → [view on GitHub Pages](https://miaconti-bit.github.io/Norway-blue-carbon-interactive-map/)**
 
 ---
 
@@ -104,8 +103,8 @@ norway-blue-carbon-map/
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/norway-blue-carbon-map.git
-cd norway-blue-carbon-map
+git clone https://github.com/miaconti-bit/Norway-blue-carbon-interactive-map.git
+cd Norway-blue-carbon-interactive-map
 pip install -r requirements.txt
 ```
 
@@ -207,7 +206,7 @@ python scripts/fetch_wdpa.py
 
 If you use this map or pipeline in your work, please cite:
 
-> Conti, M. (2026). *Norway Blue Carbon Map — interactive study-site map of Norwegian seagrass and kelp ecosystems*. GitHub. https://github.com/YOUR-USERNAME/norway-blue-carbon-map
+> Conti, M. (2026). *Norway Blue Carbon Map — interactive study-site map of Norwegian seagrass and kelp ecosystems*. GitHub. https://github.com/miaconti-bit/Norway-blue-carbon-interactive-map
 
 And the primary data sources listed above.
 
