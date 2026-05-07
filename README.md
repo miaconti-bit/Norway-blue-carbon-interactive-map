@@ -3,7 +3,7 @@
 An interactive study-site map of **Norwegian seagrass (*Zostera marina*) and kelp (*Saccharina latissima* and others)** sampling locations, overlaid with habitat polygons, marine protected areas, and human-pressure layers.
 
 Built as part of the UC San Diego MAS CSP capstone project:
-> *"Roadmap for Norwegian Blue Carbon Ecosystems as Nature-Based Solutions: Science-to-Policy Pathway Evaluation for Seagrass and Macroalgae Systems"* — Mia Conti (2025–26), in collaboration with the [C-BLUES project](https://www.niva.no/en/projectweb/c-blues) / NIVA.
+> *"Roadmap for Norwegian Blue Carbon Ecosystems as Nature-Based Solutions: Science-to-Policy Pathway Evaluation for Seagrass and Macroalgae Systems"* — Mia Conti (2025–26), in collaboration with the [C-BLUES project](https://www.c-blues.eu/) / NIVA (https://www.niva.no/en).
 
 **Live map → [view on GitHub Pages](https://miaconti-bit.github.io/Norway-blue-carbon-interactive-map/)**
 
@@ -13,8 +13,8 @@ Built as part of the UC San Diego MAS CSP capstone project:
 
 | Symbol | Meaning |
 |---|---|
-| ● circle | Kelp site (size ∝ sample size *n*) |
-| ■ square | Seagrass site (size ∝ number of cores) |
+| ■ square (orange) | Kelp site (size ∝ sample size *n*) |
+| ■ square (purple) | Seagrass site (size ∝ number of cores) |
 
 **Switchable colour layers** (top-right layer control):
 
