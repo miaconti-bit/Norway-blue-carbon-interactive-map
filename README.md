@@ -13,7 +13,7 @@ Built as part of the UC San Diego MAS CSP capstone project:
 
 | Symbol | Meaning |
 |---|---|
-| ■ square (orange) | Kelp site (size ∝ sample size *n*) |
+| ■ diamond (orange) | Kelp site (size ∝ sample size *n*) |
 | ■ square (purple) | Seagrass site (size ∝ number of cores) |
 
 **Co-location classes** (spatial analysis layer):
