@@ -59,6 +59,14 @@ BUFFER_DISTANCES_M = [1000, 5000, 10000]
 
 CANONICAL_REGIONS = ["Barents Sea", "Norwegian Sea", "Oslofjord", "Skagerrak"]
 
+# Three-tier protection scheme. The Miljødirektoratet "marine-relevant"
+# verneomrader layer mixes 18 strict marine MPAs (MarintVerneomraade) with
+# 866 mostly-terrestrial nature reserves and bird sanctuaries that touch
+# the marine fringe but do not regulate aquaculture, dredging, or fishing.
+# Treating all 884 as "protected" overstates effective marine protection.
+SUBSTANTIVE_VERNEFORM = {"MarintVerneomraade", "Nasjonalpark", "NasjonalparkSvalbard"}
+SUBSTANTIVE_IUCN = {"IUCN_IB", "IUCN_II"}
+
 
 def canonical_region(region_str: str | None, lat: float | None) -> str:
     s = (region_str or "").lower()
@@ -79,6 +87,23 @@ def canonical_region(region_str: str | None, lat: float | None) -> str:
     if lat >= 60:
         return "Norwegian Sea"
     return "Skagerrak"
+
+
+def filter_substantive_protection(protected: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Subset of marine-relevant verneomrader with enforceable marine regulation.
+
+    Includes strict marine MPAs (MarintVerneomraade), national parks with
+    marine portions, and IUCN category Ib/II areas. Excludes the bulk of
+    coastal nature reserves and bird sanctuaries that overlap a thin marine
+    fringe but do not regulate marine activities.
+    """
+    is_mpa = protected.get("is_mpa", pd.Series(False, index=protected.index))
+    if is_mpa.dtype != bool:
+        is_mpa = is_mpa.astype(str).str.lower().isin({"true", "1", "yes"})
+    verneform_match = protected.get("verneform", pd.Series("", index=protected.index)).isin(SUBSTANTIVE_VERNEFORM)
+    iucn_match = protected.get("iucn", pd.Series("", index=protected.index)).isin(SUBSTANTIVE_IUCN)
+    mask = is_mpa | verneform_match | iucn_match
+    return protected[mask].copy()
 
 
 def read_habitat(path: Path, ecosystem: str, habitat_type: str) -> gpd.GeoDataFrame:
@@ -230,6 +255,7 @@ def build_regional_summary(metrics: pd.DataFrame) -> pd.DataFrame:
     aggregations = [
         "habitat_area_m2",
         "protected_area_m2",
+        "substantive_area_m2",
         "mpa_area_m2",
         "dredging_within_1km_n",
         "dredging_within_5km_n",
@@ -249,9 +275,13 @@ def build_regional_summary(metrics: pd.DataFrame) -> pd.DataFrame:
     )
     summary["habitat_area_km2"] = summary["habitat_area_m2"] / 1_000_000
     summary["protected_area_km2"] = summary["protected_area_m2"] / 1_000_000
+    summary["substantive_area_km2"] = summary["substantive_area_m2"] / 1_000_000
     summary["mpa_area_km2"] = summary["mpa_area_m2"] / 1_000_000
     summary["percent_habitat_protected"] = (
         summary["protected_area_m2"] / summary["habitat_area_m2"] * 100
+    ).where(summary["habitat_area_m2"] > 0)
+    summary["percent_habitat_substantive"] = (
+        summary["substantive_area_m2"] / summary["habitat_area_m2"] * 100
     ).where(summary["habitat_area_m2"] > 0)
     summary["percent_habitat_in_mpa"] = (
         summary["mpa_area_m2"] / summary["habitat_area_m2"] * 100
@@ -269,6 +299,11 @@ def main() -> None:
 
     protected = gpd.read_file(PROTECTED_PATH).to_crs(CRS_WGS84)
     mpa = gpd.read_file(MPA_PATH).to_crs(CRS_WGS84)
+    substantive = filter_substantive_protection(protected)
+    print(
+        f"Protection tiers: permissive={len(protected)} polygons, "
+        f"substantive={len(substantive)}, strict (mpa)={len(mpa)}"
+    )
     dredging = read_points_csv(DREDGING_PATH, "dredging", country_filter="Norway")
     akvakultur = read_points_csv(AKVAKULTUR_PATH, "akvakultur")
     platforms = read_points_csv(PLATFORMS_PATH, "platforms")
@@ -277,6 +312,7 @@ def main() -> None:
 
     habitat_m = habitat.to_crs(CRS_METERS)
     protected_m = protected.to_crs(CRS_METERS)
+    substantive_m = substantive.to_crs(CRS_METERS)
     mpa_m = mpa.to_crs(CRS_METERS)
     dredging_m = dredging.to_crs(CRS_METERS)
     akvakultur_m = akvakultur.to_crs(CRS_METERS)
@@ -302,12 +338,14 @@ def main() -> None:
     )
 
     protection_inter, protection_summary = area_overlap(habitat_m, protected_m, "protected")
+    substantive_inter, substantive_summary = area_overlap(habitat_m, substantive_m, "substantive")
     mpa_inter, mpa_summary = area_overlap(habitat_m, mpa_m, "mpa")
 
     metrics = add_cols(
         base,
         [
             protection_summary,
+            substantive_summary,
             mpa_summary,
             nearest_distance_m(habitat_m, protected_m, "nearest_protected_distance_m"),
             nearest_distance_m(habitat_m, mpa_m, "nearest_mpa_distance_m"),
@@ -324,6 +362,9 @@ def main() -> None:
     )
     metrics["percent_protected"] = (
         metrics["protected_area_m2"] / metrics["habitat_area_m2"] * 100
+    ).clip(upper=100)
+    metrics["percent_substantive"] = (
+        metrics["substantive_area_m2"] / metrics["habitat_area_m2"] * 100
     ).clip(upper=100)
     metrics["percent_mpa"] = (
         metrics["mpa_area_m2"] / metrics["habitat_area_m2"] * 100
@@ -342,6 +383,14 @@ def main() -> None:
     metrics["high_pressure_low_protection_flag"] = (
         (metrics["colocation_pressure_index"] > 0)
         & (metrics["percent_protected"].fillna(0) < 1)
+    )
+    metrics["high_pressure_no_substantive_protection_flag"] = (
+        (metrics["colocation_pressure_index"] > 0)
+        & (metrics["percent_substantive"].fillna(0) < 1)
+    )
+    metrics["high_pressure_no_strict_protection_flag"] = (
+        (metrics["colocation_pressure_index"] > 0)
+        & (metrics["percent_mpa"].fillna(0) < 1)
     )
 
     protection_overlaps = pd.concat(
@@ -383,7 +432,16 @@ def main() -> None:
             "Pressure index is a transparent screening score, not an ecological impact model.",
             "Exact overlap with point pressure data is avoided; buffer counts and nearest distances are more informative.",
             "Canonical regions are approximated from habitat polygon centroid latitude where source region is absent.",
+            "Three protection tiers: percent_protected (any verneomrade, n=884; permissive), "
+            "percent_substantive (Marint Verneomraade + Nasjonalpark + IUCN Ib/II, n~42; enforceable marine regulation), "
+            "percent_mpa (MarintVerneomraade only, n=18; strict). Use percent_mpa for effective marine protection.",
         ],
+        "protection_tier_definitions": {
+            "permissive_verneform": "any marine-relevant verneomrade",
+            "substantive_verneform": sorted(SUBSTANTIVE_VERNEFORM),
+            "substantive_iucn": sorted(SUBSTANTIVE_IUCN),
+            "strict_verneform": ["MarintVerneomraade"],
+        },
     }
     OUT_MANIFEST.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
@@ -401,6 +459,7 @@ def main() -> None:
                 "habitat_polygons_n",
                 "habitat_area_km2",
                 "percent_habitat_protected",
+                "percent_habitat_substantive",
                 "percent_habitat_in_mpa",
             ]
         ].to_string(index=False)

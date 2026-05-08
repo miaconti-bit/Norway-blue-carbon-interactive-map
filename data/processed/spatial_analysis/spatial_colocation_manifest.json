@@ -25,6 +25,22 @@
   "notes": [
     "Pressure index is a transparent screening score, not an ecological impact model.",
     "Exact overlap with point pressure data is avoided; buffer counts and nearest distances are more informative.",
-    "Canonical regions are approximated from habitat polygon centroid latitude where source region is absent."
-  ]
+    "Canonical regions are approximated from habitat polygon centroid latitude where source region is absent.",
+    "Three protection tiers: percent_protected (any verneomrade, n=884; permissive), percent_substantive (Marint Verneomraade + Nasjonalpark + IUCN Ib/II, n~42; enforceable marine regulation), percent_mpa (MarintVerneomraade only, n=18; strict). Use percent_mpa for effective marine protection."
+  ],
+  "protection_tier_definitions": {
+    "permissive_verneform": "any marine-relevant verneomrade",
+    "substantive_verneform": [
+      "MarintVerneomraade",
+      "Nasjonalpark",
+      "NasjonalparkSvalbard"
+    ],
+    "substantive_iucn": [
+      "IUCN_IB",
+      "IUCN_II"
+    ],
+    "strict_verneform": [
+      "MarintVerneomraade"
+    ]
+  }
 }

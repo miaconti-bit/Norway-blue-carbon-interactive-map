@@ -2,7 +2,7 @@
   "source_name": "EMODnet Human Activities WFS",
   "wfs_version": "2.0.0",
   "wfs_base": "https://ows.emodnet-humanactivities.eu/geoserver/emodnet/ows",
-  "downloaded_at_utc": "2026-05-06T04:35:35.077819+00:00",
+  "downloaded_at_utc": "2026-05-08T06:48:15.380722+00:00",
   "license": "EMODnet Human Activities — free for non-commercial use with attribution",
   "bbox": [
     4.0,
