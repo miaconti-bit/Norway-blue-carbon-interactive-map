@@ -667,7 +667,7 @@ def add_colocation_layers(fmap: folium.Map) -> dict[str, int]:
         folium.GeoJson(
             {"type": "FeatureCollection", "features": class_features},
             name=f"Co-location: {meta['label']} ({len(class_features):,})",
-            show=cls in ("pressure_low_protection", "pressure_and_protected"),
+            show=True,
             style_function=style_function,
             highlight_function=hb19_highlight,
             tooltip=folium.GeoJsonTooltip(
@@ -1235,10 +1235,8 @@ def attach_layer_panels(
     fmap: folium.Map,
     html_inner: str,
     source_links_by_layer: dict[str, list[dict[str, str]]],
-    color_layer_names: list[str],
 ) -> None:
     source_links_json = json.dumps(source_links_by_layer, ensure_ascii=False)
-    color_layer_names_json = json.dumps(color_layer_names, ensure_ascii=False)
     template = (
         "{% macro html(this, kwargs) %}\n"
         '<div id="dynamic-legend" style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;'
@@ -1248,19 +1246,13 @@ def attach_layer_panels(
         ' max-width: 300px; max-height: calc(100vh - 70px); overflow-y: auto;'
         ' box-shadow: 0 1px 4px rgba(0,0,0,0.15);">'
         + html_inner +
+        '<div id="source-panel" style="display:none; margin-top:8px; padding-top:8px;'
+        ' border-top:2px solid #ddd;"></div>'
         "</div>\n"
-        '<div id="source-panel" style="position: fixed; bottom: 20px; right: 12px; z-index: 9998;'
-        ' background: rgba(255,255,255,0.97); padding: 9px 11px;'
-        ' border: 1px solid #888; border-radius: 6px;'
-        ' font-family: system-ui, -apple-system, sans-serif; font-size: 12px;'
-        ' width: 300px; max-height: 45vh; overflow-y: auto;'
-        ' box-shadow: 0 1px 4px rgba(0,0,0,0.15); display:none;"></div>\n'
         "<script>\n"
         "(function() {\n"
         f"  const sourceLinksByLayer = {source_links_json};\n"
-        f"  const colorLayerSet = new Set({color_layer_names_json});\n"
         "  const activeLayers = new Set();\n"
-        "  let suppressMutex = false;\n"
         "  function esc(value) {\n"
         "    return String(value == null ? '' : value)\n"
         "      .replace(/&/g, '&amp;').replace(/</g, '&lt;')\n"
@@ -1280,9 +1272,11 @@ def attach_layer_panels(
         "    const entries = Array.prototype.slice.call(legend.querySelectorAll('[data-layer]'));\n"
         "    let visibleCount = 0;\n"
         "    entries.forEach(function(entry) {\n"
-        "      const show = activeLayers.has(entry.getAttribute('data-layer'));\n"
-        "      entry.style.display = show ? '' : 'none';\n"
-        "      if (show) visibleCount += 1;\n"
+        "      const layerName = entry.getAttribute('data-layer');\n"
+        "      const isActive = activeLayers.has(layerName);\n"
+        "      const isToggleable = entry.hasAttribute('data-toggleable');\n"
+        "      entry.style.display = (isActive || isToggleable) ? '' : 'none';\n"
+        "      if (isActive || isToggleable) visibleCount += 1;\n"
         "    });\n"
         "    const empty = legend.querySelector('[data-empty-legend]');\n"
         "    if (empty) empty.style.display = visibleCount ? 'none' : '';\n"
@@ -1335,113 +1329,29 @@ def attach_layer_panels(
         "      if (input.checked) activeLayers.add(nameOfInput(input));\n"
         "    });\n"
         "  }\n"
-        "  function enforceColorMutex(triggeredInput, inputs) {\n"
-        "    if (suppressMutex) return;\n"
-        "    const triggeredName = nameOfInput(triggeredInput);\n"
-        "    if (!colorLayerSet.has(triggeredName)) return;\n"
-        "    if (!triggeredInput.checked) return;\n"
-        "    suppressMutex = true;\n"
-        "    inputs.forEach(function(other) {\n"
-        "      if (other === triggeredInput) return;\n"
-        "      if (!other.checked) return;\n"
-        "      const otherName = nameOfInput(other);\n"
-        "      if (colorLayerSet.has(otherName)) {\n"
-        "        other.click();\n"
+        "  function removeColocationFromControl() {\n"
+        "    var overlayContainer = document.querySelector('.leaflet-control-layers-overlays');\n"
+        "    if (!overlayContainer) return;\n"
+        "    var labels = Array.prototype.slice.call(overlayContainer.querySelectorAll('label'));\n"
+        "    labels.forEach(function(label) {\n"
+        "      var span = label.querySelector('span');\n"
+        "      var text = (label.dataset.fullName || (span ? span.textContent : '')).replace(/^\\s+|\\s+$/g, '');\n"
+        "      if (text.indexOf('Co-location: ') === 0) {\n"
+        "        if (label.parentNode) label.parentNode.removeChild(label);\n"
         "      }\n"
-        "    });\n"
-        "    suppressMutex = false;\n"
-        "  }\n"
-        "  function injectGroupCSS() {\n"
-        "    if (document.getElementById('overlay-group-style')) return;\n"
-        "    const style = document.createElement('style');\n"
-        "    style.id = 'overlay-group-style';\n"
-        "    style.textContent =\n"
-        "      '.leaflet-control-layers-overlays div.overlay-group { margin: 2px 0; }' +\n"
-        "      '.leaflet-control-layers-overlays div.overlay-group > .overlay-group-header {' +\n"
-        "      ' cursor: pointer; padding: 3px 4px; font-weight: 600; color: #0a58ca;' +\n"
-        "      ' user-select: none; border-top: 1px solid #e5e5e5; line-height:1.3; }' +\n"
-        "      '.leaflet-control-layers-overlays div.overlay-group > .overlay-group-header::before {' +\n"
-        "      ' content: \"\\\\25B8\"; display: inline-block; margin-right: 5px; transition: transform .15s;' +\n"
-        "      ' transform-origin: center; }' +\n"
-        "      '.leaflet-control-layers-overlays div.overlay-group[data-open=\"true\"] > .overlay-group-header::before { transform: rotate(90deg); }' +\n"
-        "      '.leaflet-control-layers-overlays div.overlay-group > label { display: block; padding-left: 18px; }' +\n"
-        "      '.leaflet-control-layers-overlays div.overlay-group > .overlay-group-hint {' +\n"
-        "      ' font-size: 10.5px; color: #888; padding: 0 4px 3px 18px; line-height: 1.3; }' +\n"
-        "      '.leaflet-control-layers-overlays div.overlay-group:not([data-open=\"true\"]) > label,' +\n"
-        "      ' .leaflet-control-layers-overlays div.overlay-group:not([data-open=\"true\"]) > .overlay-group-hint { display: none; }';\n"
-        "    document.head.appendChild(style);\n"
-        "  }\n"
-        "  function buildOverlayGroups(overlayContainer) {\n"
-        "    const groups = [\n"
-        "      { prefix: 'Color: ', title: 'Color (marker color)',\n"
-        "        hint: 'Choose how site markers are colored. Only one Color layer can be on at a time.' },\n"
-        "      { prefix: 'Co-location: ', title: 'Co-location classification',\n"
-        "        hint: 'Mapped HB19 polygons classified by pressure / protection / study coverage.' }\n"
-        "    ];\n"
-        "    groups.forEach(function(group) {\n"
-        "      const childLabels = Array.prototype.slice.call(overlayContainer.children)\n"
-        "        .filter(function(child) {\n"
-        "          if (child.tagName !== 'LABEL') return false;\n"
-        "          const span = child.querySelector('span');\n"
-        "          const text = span ? span.textContent.replace(/^\\s+|\\s+$/g, '') : '';\n"
-        "          return text.indexOf(group.prefix) === 0;\n"
-        "        });\n"
-        "      if (!childLabels.length) return;\n"
-        "      const wrap = document.createElement('div');\n"
-        "      wrap.className = 'overlay-group';\n"
-        "      const anyChecked = childLabels.some(function(l) {\n"
-        "        const inp = l.querySelector('input[type=\"checkbox\"]');\n"
-        "        return inp && inp.checked;\n"
-        "      });\n"
-        "      wrap.setAttribute('data-open', anyChecked ? 'true' : 'false');\n"
-        "      const header = document.createElement('div');\n"
-        "      header.className = 'overlay-group-header';\n"
-        "      header.setAttribute('role', 'button');\n"
-        "      header.setAttribute('tabindex', '0');\n"
-        "      header.textContent = group.title + ' (' + childLabels.length + ')';\n"
-        "      function toggleOpen(e) {\n"
-        "        if (e) { e.preventDefault(); e.stopPropagation(); }\n"
-        "        const isOpen = wrap.getAttribute('data-open') === 'true';\n"
-        "        wrap.setAttribute('data-open', isOpen ? 'false' : 'true');\n"
-        "      }\n"
-        "      header.addEventListener('click', toggleOpen);\n"
-        "      header.addEventListener('keydown', function(e) {\n"
-        "        if (e.key === 'Enter' || e.key === ' ') { toggleOpen(e); }\n"
-        "      });\n"
-        "      wrap.appendChild(header);\n"
-        "      if (group.hint) {\n"
-        "        const hintEl = document.createElement('div');\n"
-        "        hintEl.className = 'overlay-group-hint';\n"
-        "        hintEl.textContent = group.hint;\n"
-        "        wrap.appendChild(hintEl);\n"
-        "      }\n"
-        "      overlayContainer.insertBefore(wrap, childLabels[0]);\n"
-        "      childLabels.forEach(function(label) {\n"
-        "        const span = label.querySelector('span');\n"
-        "        if (span) {\n"
-        "          const fullName = span.textContent.replace(/^\\s+|\\s+$/g, '');\n"
-        "          if (!label.dataset.fullName) label.dataset.fullName = fullName;\n"
-        "          if (fullName.indexOf(group.prefix) === 0) {\n"
-        "            span.textContent = ' ' + fullName.substring(group.prefix.length);\n"
-        "          }\n"
-        "        }\n"
-        "        wrap.appendChild(label);\n"
-        "      });\n"
         "    });\n"
         "  }\n"
         "  function init() {\n"
-        "    const overlayContainer = document.querySelector('.leaflet-control-layers-overlays');\n"
-        "    const inputs = findOverlayInputs();\n"
+        "    var overlayContainer = document.querySelector('.leaflet-control-layers-overlays');\n"
+        "    var inputs = findOverlayInputs();\n"
         "    if (!overlayContainer || !inputs.length) { setTimeout(init, 100); return; }\n"
-        "    injectGroupCSS();\n"
-        "    buildOverlayGroups(overlayContainer);\n"
         "    inputs.forEach(function(input) {\n"
         "      input.addEventListener('change', function() {\n"
-        "        enforceColorMutex(input, inputs);\n"
         "        syncFromInputs(inputs);\n"
         "        renderPanels();\n"
         "      });\n"
         "    });\n"
+        "    removeColocationFromControl();\n"
         "    syncFromInputs(inputs);\n"
         "    renderPanels();\n"
         "  }\n"
@@ -1459,9 +1369,10 @@ def attach_layer_panels(
     fmap.add_child(macro)
 
 
-def legend_entry(layer_name: str, html_inner: str) -> str:
+def legend_entry(layer_name: str, html_inner: str, toggleable: bool = False) -> str:
     layer_attr = html_lib.escape(layer_name, quote=True)
     layer_text = html_lib.escape(layer_name)
+    toggleable_attr = " data-toggleable" if toggleable else ""
     title = (
         f"<div style='font-size:10.5px;font-weight:700;color:#0a58ca;"
         f"text-transform:uppercase;letter-spacing:.02em;margin:8px 0 3px;"
@@ -1469,7 +1380,7 @@ def legend_entry(layer_name: str, html_inner: str) -> str:
         f"{layer_text}</div>"
     )
     return (
-        f"<div class='legend-entry' data-layer='{layer_attr}' style='display:none'>"
+        f"<div class='legend-entry'{toggleable_attr} data-layer='{layer_attr}' style='display:none'>"
         f"{title}{html_inner}</div>"
     )
 
@@ -1532,12 +1443,18 @@ def hb19_legend_html(alegras_count: int, tare_count: int) -> str:
             f"opacity:.45;margin-right:6px;border:1px solid #8c510a'></span>"
             f"<span>Kelp forest occurrences: {tare_count:,}</span></div>"
         )
+    eelgrass_note = (
+        "<div style='font-size:11px;color:#777;line-height:1.35;margin-top:4px'>"
+        "Eelgrass polygons are classified by pressure, protection, and study coverage "
+        "(seagrass only).</div>"
+    ) if alegras_count else ""
     return (
         "<div style='font-weight:600;margin:8px 0 4px'>Naturbase HB19 polygons</div>"
         + "".join(rows)
         + "<div style='font-size:11px;color:#777;line-height:1.35'>"
         "Fill shade follows Naturbase value class A/B/C."
         "</div>"
+        + eelgrass_note
     )
 
 
@@ -1594,12 +1511,8 @@ def colocation_legend_html(counts: dict[str, int]) -> str:
             f"<span style='color:#666'>{meta['description']}</span></span></div>"
         )
     return (
-        "<div style='font-weight:600;margin:8px 0 4px'>Co-location result layers</div>"
+        "<div style='font-weight:600;margin:8px 0 4px'>Carbon assessment</div>"
         + "".join(rows)
-        + "<div style='font-size:11px;color:#777;line-height:1.35'>"
-          "These layers classify each mapped HB19 habitat polygon using the spatial join. "
-          "Toggle the “Co-location:” layers in the layer control."
-          "</div>"
     )
 
 
@@ -1667,7 +1580,7 @@ def add_step2_regional_layer(fmap: folium.Map) -> bool:
     if not STEP2_REGIONAL_PATH.exists() and not STEP2_NATIONAL_PATH.exists():
         return False
 
-    fg = folium.FeatureGroup(name="Step 2: Carbon stocks by region", show=False)
+    fg = folium.FeatureGroup(name="Carbon stocks in seagrass by region", show=False)
 
     # ── Seagrass regional bubbles ────────────────────────────────────────
     if STEP2_REGIONAL_PATH.exists():
@@ -2060,65 +1973,13 @@ def main() -> None:
             opacity=0.7,
         ).add_to(fmap)
 
-    color_layer_names: list[str] = [
-        "Color: Ecosystem type",
-        "Color: Region (canonical 4)",
-        "Color: Region (detailed)",
-        "Color: Year",
-        "Color: Sediment C stock (seagrass)",
-        "Color: Source study",
-        "Color: Habitat type",
-    ]
-
     # Default layer: fixed per-ecosystem color (kelp=orange diamond, seagrass=purple square)
     add_color_layer(
-        fmap, "Color: Ecosystem type", kelp, sea,
+        fmap, "Study sites", kelp, sea,
         kelp_color_fn=lambda r: KELP_ECOSYSTEM_COLOR,
         seagrass_color_fn=lambda r: SEAGRASS_ECOSYSTEM_COLOR,
         kelp_n_min=kelp_n_min, kelp_n_max=kelp_n_max,
         sea_n_min=sea_n_min, sea_n_max=sea_n_max, show=True,
-    )
-    add_color_layer(
-        fmap, "Color: Region (canonical 4)", kelp, sea,
-        kelp_color_fn=lambda r: canonical_colors.get(r["region_canonical"], NO_DATA_GREY),
-        seagrass_color_fn=lambda r: canonical_colors.get(r["region_canonical"], NO_DATA_GREY),
-        kelp_n_min=kelp_n_min, kelp_n_max=kelp_n_max,
-        sea_n_min=sea_n_min, sea_n_max=sea_n_max, show=False,
-    )
-    add_color_layer(
-        fmap, "Color: Region (detailed)", kelp, sea,
-        kelp_color_fn=lambda r: detailed_kelp.get(r["region_short"], NO_DATA_GREY),
-        seagrass_color_fn=lambda r: detailed_sea.get(r["region_orig"], NO_DATA_GREY),
-        kelp_n_min=kelp_n_min, kelp_n_max=kelp_n_max,
-        sea_n_min=sea_n_min, sea_n_max=sea_n_max, show=False,
-    )
-    add_color_layer(
-        fmap, "Color: Year", kelp, sea,
-        kelp_color_fn=lambda r: year_cmap(r["year"]) if pd.notna(r.get("year")) else NO_DATA_GREY,
-        seagrass_color_fn=lambda r: year_cmap(r["year_min"]) if pd.notna(r.get("year_min")) else NO_DATA_GREY,
-        kelp_n_min=kelp_n_min, kelp_n_max=kelp_n_max,
-        sea_n_min=sea_n_min, sea_n_max=sea_n_max, show=False,
-    )
-    add_color_layer(
-        fmap, "Color: Sediment C stock (seagrass)", kelp, sea,
-        kelp_color_fn=lambda r: NO_DATA_GREY,
-        seagrass_color_fn=lambda r: cstock_cmap(r["c_stock_mean"]) if pd.notna(r.get("c_stock_mean")) else NO_DATA_GREY,
-        kelp_n_min=kelp_n_min, kelp_n_max=kelp_n_max,
-        sea_n_min=sea_n_min, sea_n_max=sea_n_max, show=False,
-    )
-    add_color_layer(
-        fmap, "Color: Source study", kelp, sea,
-        kelp_color_fn=lambda r: source_colors_kelp.get(r["Source_short"], NO_DATA_GREY),
-        seagrass_color_fn=lambda r: source_colors_sea.get(r["source"], NO_DATA_GREY),
-        kelp_n_min=kelp_n_min, kelp_n_max=kelp_n_max,
-        sea_n_min=sea_n_min, sea_n_max=sea_n_max, show=False,
-    )
-    add_color_layer(
-        fmap, "Color: Habitat type", kelp, sea,
-        kelp_color_fn=lambda r: habitat_colors_kelp.get(r["Habitat_type"], NO_DATA_GREY),
-        seagrass_color_fn=lambda r: NO_DATA_GREY,
-        kelp_n_min=kelp_n_min, kelp_n_max=kelp_n_max,
-        sea_n_min=sea_n_min, sea_n_max=sea_n_max, show=False,
     )
 
     fmap.fit_bounds([[all_lats.min(), all_lons.min()], [all_lats.max(), all_lons.max()]])
@@ -2128,13 +1989,13 @@ def main() -> None:
     layer_sources: dict[str, list[dict[str, str]]] = {}
     legend_entries: list[str] = []
 
-    def add_layer_metadata(layer_name: str, legend_html: str, source_links: list[dict[str, str]], active: bool = False) -> None:
-        legend_entries.append(legend_entry(layer_name, legend_html))
+    def add_layer_metadata(layer_name: str, legend_html: str, source_links: list[dict[str, str]], active: bool = False, toggleable: bool = False) -> None:
+        legend_entries.append(legend_entry(layer_name, legend_html, toggleable=toggleable))
         layer_sources[layer_name] = source_links
         _ = active  # active flag only matters for initial Folium show=True; kept for API compat
 
     add_layer_metadata(
-        "Color: Ecosystem type",
+        "Study sites",
         (
             f"<div style='font-size:11.5px;margin-bottom:4px;font-weight:600'>Ecosystem type</div>"
             f"<div style='display:flex;align-items:center;gap:6px;margin-bottom:3px'>"
@@ -2148,57 +2009,6 @@ def main() -> None:
         ),
         source_groups["study"],
         active=True,
-    )
-    add_layer_metadata(
-        "Color: Region (canonical 4)",
-        color_region_legend_html(kelp_counts, sea_counts),
-        source_groups["study"],
-    )
-    add_layer_metadata(
-        "Color: Region (detailed)",
-        generic_site_layer_legend_html(
-            "Detailed source regions",
-            "Marker color follows the original region labels before four-region normalization.",
-        ),
-        source_groups["study"],
-    )
-    add_layer_metadata(
-        "Color: Year",
-        simple_gradient_legend_html(
-            f"Sampling / source year ({year_min}-{year_max})",
-            ["#2c7fb8", "#7fcdbb", "#edf8b1", "#feb24c", "#f03b20"],
-            str(year_min),
-            str(year_max),
-            "Kelp uses source year where available; seagrass uses the minimum sampled year.",
-        ) + "<div style='margin-top:8px'>" + shape_legend_html() + "</div>",
-        source_groups["study"],
-    )
-    add_layer_metadata(
-        "Color: Sediment C stock (seagrass)",
-        simple_gradient_legend_html(
-            "Mean sediment C stock, g C/m²",
-            ["#fff7bc", "#fec44f", "#d95f0e", "#7f0000"],
-            "0",
-            f"{cstock_max:,}",
-            "Seagrass signal only; kelp markers are grey on this layer.",
-        ) + "<div style='margin-top:8px'>" + shape_legend_html() + "</div>",
-        source_groups["study"],
-    )
-    add_layer_metadata(
-        "Color: Source study",
-        generic_site_layer_legend_html(
-            "Source study",
-            "Marker color distinguishes the source publication or workbook source row.",
-        ),
-        source_groups["all_study"],
-    )
-    add_layer_metadata(
-        "Color: Habitat type",
-        generic_site_layer_legend_html(
-            "Habitat type",
-            "Kelp marker color follows habitat/substrate class; seagrass is grey here.",
-        ),
-        source_groups["study"],
     )
 
     add_layer_metadata(
@@ -2241,10 +2051,10 @@ def main() -> None:
             continue
         layer_name = f"Co-location: {meta['label']} ({count:,})"
         active = key in ("pressure_low_protection", "pressure_and_protected")
-        add_layer_metadata(layer_name, colocation_legend_html({key: count}), source_groups["colocation"], active=active)
+        add_layer_metadata(layer_name, colocation_legend_html({key: count}), source_groups["colocation"], active=active, toggleable=True)
 
     if step2_layer_added:
-        add_layer_metadata("Step 2: Carbon stocks by region", step2_summary_html(), source_groups["step2"])
+        add_layer_metadata("Carbon stocks in seagrass by region", step2_summary_html(), source_groups["step2"])
 
     _ngu_sources = [{"label": "NGU ModellertHavbunnsgeologi WMS", "url": _NGU_OC_WMS}]
     _ngu_legend_base = (
@@ -2308,7 +2118,7 @@ def main() -> None:
           "Canonical regions per Gagnon et al. 2024.<br>"
           "Source links update in the bottom-right Sources panel.</div>"
     )
-    attach_layer_panels(fmap, legend_inner, layer_sources, color_layer_names)
+    attach_layer_panels(fmap, legend_inner, layer_sources)
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     fmap.save(str(OUT_PATH))
