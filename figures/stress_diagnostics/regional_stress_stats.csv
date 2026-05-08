@@ -1,0 +1,7 @@
+canonical_region,ecosystem,n_polygons,total_area_km2,median_pressure_index,max_pressure_index,pct_unprotected,pct_high_protection,n_high_pressure_low_protection,pct_area_high_pressure_low_protection,n_with_study_site_within_5km,pct_with_study_site_within_5km,top3_pressured_polygons
+Barents Sea,macroalgae,1039,1109.9,0.0,17,79.7,13.8,38,0.54,11,1.1,Langholmen (idx=17); Langholmen (idx=17); Røssøya-Røssøysundet (idx=17)
+Barents Sea,seagrass,355,5.9,0.0,17,78.3,20.8,39,14.56,27,7.6,"Nordvågen (idx=17); Salangsverket, utenfor flytebrygga og inn mot Medbyleira (idx=12); Salangsverket, ved Medbyleira (idx=12)"
+Norwegian Sea,macroalgae,4833,3080.4,0.0,36,80.5,15.7,236,1.42,50,1.0,Halsafjorden (idx=36); Halsafjorden (idx=36); Halsafjorden (idx=36)
+Norwegian Sea,seagrass,678,17.2,0.0,20,89.5,8.8,58,3.04,14,2.1,"Munkholmen (idx=20); Hanøy (idx=11); Molvær, Sandvika (idx=9)"
+Skagerrak,macroalgae,1371,351.0,0.0,24,57.8,36.8,103,13.8,86,6.3,Kjerringa (idx=24); Eskelandsholmane (idx=24); Nonstevika (idx=16)
+Skagerrak,seagrass,3310,42.0,0.0,48,90.1,7.8,491,17.52,258,7.8,Ærøya (idx=48); Flødevigen (idx=48); Flødevigen (idx=48)
