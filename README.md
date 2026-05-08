@@ -25,7 +25,7 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | Study site within 5 km | Mapped habitat near an existing study site |
 | Mapped habitat / evidence gap | No pressure, study site, or strong protection signal |
 
-**Toggable layers** (top-right layer control):
+**Toggable layers overview** (right side bar layer control):
 
 - **Ecosystem type** — kelp (orange) vs seagrass (purple); default view
 - **Canonical region** — Barents Sea / Norwegian Sea / Oslofjord / Skagerrak (Gagnon et al. 2024 scheme)
@@ -35,7 +35,7 @@ Built as part of the UC San Diego MAS CSP capstone project:
 - **Source study** — colour by citation
 - **Habitat type**
 
-**Additional toggleable layers:**
+**Specific toggleable layers:**
 
 | Layer | Source |
 |---|---|
