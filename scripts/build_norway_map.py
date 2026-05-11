@@ -27,8 +27,6 @@ Run:
 from __future__ import annotations
 
 import json
-import re
-import unicodedata
 import html as html_lib
 from pathlib import Path
 
@@ -39,12 +37,17 @@ from branca.colormap import LinearColormap
 from branca.element import Template, MacroElement
 
 from geo_utils import NORWAY_BBOX, clip_to_bbox
+from mia_map.parsers import dms_to_dd, extract_year, first_number, parse_point_wkt
+from mia_map.popups import fmt_row
 from regions import (
     CANONICAL_REGIONS,
     CANONICAL_REGION_COLORS,
     REGION_CENTROIDS,
     canonical_region,
 )
+
+
+TEMPLATES_DIR = Path(__file__).resolve().parent / "mia_map" / "templates"
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -164,60 +167,6 @@ COLOCATION_CLASSES = {
 }
 
 
-def dms_to_dd(value) -> float | None:
-    """Parse degrees/minutes/seconds with a hemisphere letter to decimal degrees,
-    handling the unicode quote variants used in the kelp workbook.
-    """
-    if value is None or (isinstance(value, float) and pd.isna(value)):
-        return None
-    s = unicodedata.normalize("NFKC", str(value)).strip()
-    s = (
-        s.replace("’", "'").replace("‘", "'")
-        .replace("”", '"').replace("“", '"')
-        .replace("′", "'").replace("″", '"')
-    )
-    s = s.replace("''", '"')
-    m = re.search(
-        r"([0-9]+(?:\.[0-9]+)?)°\s*([0-9]+(?:\.[0-9]+)?)?'?\s*([0-9]+(?:\.[0-9]+)?)?\"?\s*([NSEW])",
-        s,
-    )
-    if not m:
-        return None
-    deg = float(m.group(1))
-    minutes = float(m.group(2) or 0)
-    seconds = float(m.group(3) or 0)
-    hemi = m.group(4)
-    dd = deg + minutes / 60 + seconds / 3600
-    return -dd if hemi in ("S", "W") else round(dd, 6)
-
-
-def extract_year(value) -> int | None:
-    if value is None or (isinstance(value, float) and pd.isna(value)):
-        return None
-    m = re.search(r"(19|20)\d{2}", str(value))
-    return int(m.group(0)) if m else None
-
-
-def parse_point_wkt(geom_str) -> tuple[float, float]:
-    """Extract (lat, lon) from a WKT POINT string like 'POINT (lon lat)'."""
-    if not geom_str or not isinstance(geom_str, str):
-        return (float("nan"), float("nan"))
-    m = re.match(r"POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)", geom_str.strip())
-    if not m:
-        return (float("nan"), float("nan"))
-    return float(m.group(2)), float(m.group(1))  # lat=y, lon=x
-
-
-def first_number(value) -> float | None:
-    """Return the first numeric token in a free-text cell. Handles values like
-    '~30', '4000*', '5–10 m'. Returns None if no numeric token is found.
-    """
-    if value is None or (isinstance(value, float) and pd.isna(value)):
-        return None
-    m = re.search(r"[-+]?\d+(?:\.\d+)?", str(value))
-    return float(m.group(0)) if m else None
-
-
 def load_kelp_sites(xlsm_path: Path) -> pd.DataFrame:
     df = pd.read_excel(xlsm_path, sheet_name="Site_Level", header=1, engine="openpyxl")
     df["lat"] = df["Latitude"].apply(dms_to_dd)
@@ -290,12 +239,6 @@ def radius_for_n(n: float | None, n_min: float, n_max: float) -> float:
         return 5.0
     frac = ((n - n_min) / (n_max - n_min)) ** 0.5
     return 3.5 + 5.5 * frac
-
-
-def fmt_row(label: str, val) -> str:
-    if val is None or (isinstance(val, float) and pd.isna(val)) or str(val).strip() == "":
-        return ""
-    return f"<tr><td style='padding-right:10px;color:#555;vertical-align:top'>{label}</td><td>{val}</td></tr>"
 
 
 def kelp_popup_html(row: pd.Series) -> str:
@@ -1187,7 +1130,17 @@ def attach_layer_panels(
     html_inner: str,
     source_links_by_layer: dict[str, list[dict[str, str]]],
 ) -> None:
+    """Inject the dynamic legend / source-panel HTML and JavaScript.
+
+    The JS body lives in mia_map/templates/layer_panel.js so it can be
+    edited with proper syntax highlighting; this function reads it,
+    substitutes the source-links JSON, and wraps it in the Jinja macro
+    Folium expects.
+    """
     source_links_json = json.dumps(source_links_by_layer, ensure_ascii=False)
+    js_body = (TEMPLATES_DIR / "layer_panel.js").read_text(encoding="utf-8")
+    js_body = js_body.replace("__SOURCE_LINKS_JSON__", source_links_json)
+
     template = (
         "{% macro html(this, kwargs) %}\n"
         '<div id="dynamic-legend" style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;'
@@ -1201,117 +1154,7 @@ def attach_layer_panels(
         ' border-top:2px solid #ddd;"></div>'
         "</div>\n"
         "<script>\n"
-        "(function() {\n"
-        f"  const sourceLinksByLayer = {source_links_json};\n"
-        "  const activeLayers = new Set();\n"
-        "  function esc(value) {\n"
-        "    return String(value == null ? '' : value)\n"
-        "      .replace(/&/g, '&amp;').replace(/</g, '&lt;')\n"
-        "      .replace(/>/g, '&gt;').replace(/\"/g, '&quot;')\n"
-        "      .replace(/'/g, '&#39;');\n"
-        "  }\n"
-        "  function nameOfInput(input) {\n"
-        "    const label = input.parentElement;\n"
-        "    if (label && label.dataset && label.dataset.fullName) return label.dataset.fullName;\n"
-        "    const span = label && label.querySelector('span');\n"
-        "    return span ? span.textContent.replace(/^\\s+|\\s+$/g, '') : '';\n"
-        "  }\n"
-        "  function renderPanels() {\n"
-        "    const legend = document.getElementById('dynamic-legend');\n"
-        "    const sourcePanel = document.getElementById('source-panel');\n"
-        "    if (!legend || !sourcePanel) return;\n"
-        "    const entries = Array.prototype.slice.call(legend.querySelectorAll('[data-layer]'));\n"
-        "    let visibleCount = 0;\n"
-        "    entries.forEach(function(entry) {\n"
-        "      const layerName = entry.getAttribute('data-layer');\n"
-        "      const isActive = activeLayers.has(layerName);\n"
-        "      const isToggleable = entry.hasAttribute('data-toggleable');\n"
-        "      entry.style.display = (isActive || isToggleable) ? '' : 'none';\n"
-        "      if (isActive || isToggleable) visibleCount += 1;\n"
-        "    });\n"
-        "    const empty = legend.querySelector('[data-empty-legend]');\n"
-        "    if (empty) empty.style.display = visibleCount ? 'none' : '';\n"
-        "    const orderedActive = Array.from(activeLayers).filter(function(name) {\n"
-        "      return (sourceLinksByLayer[name] || []).length > 0;\n"
-        "    });\n"
-        "    if (!orderedActive.length) {\n"
-        "      sourcePanel.style.display = 'none';\n"
-        "      sourcePanel.innerHTML = '';\n"
-        "      return;\n"
-        "    }\n"
-        "    sourcePanel.style.display = '';\n"
-        "    const blocks = orderedActive.map(function(layerName) {\n"
-        "      const links = sourceLinksByLayer[layerName] || [];\n"
-        "      if (!links.length) return '';\n"
-        "      const primary = links[0];\n"
-        "      const extras = links.slice(1);\n"
-        "      let html = '<div style=\"margin:8px 0 4px;border-top:1px solid #eee;padding-top:6px\">' +\n"
-        "        '<div style=\"font-weight:700;font-size:11px;color:#0a58ca;text-transform:uppercase;letter-spacing:.02em;line-height:1.3\">' + esc(layerName) + '</div>' +\n"
-        "        '<div style=\"font-size:11.5px;line-height:1.45;margin-top:3px\">' +\n"
-        "        esc(primary.label) +\n"
-        "        ' <a href=\"' + esc(primary.url) + '\" target=\"_blank\" rel=\"noopener noreferrer\"' +\n"
-        "        ' style=\"color:#0a58ca;text-decoration:none;font-weight:700;white-space:nowrap;margin-left:4px\">(Source)</a>' +\n"
-        "        '</div>';\n"
-        "      if (primary.note) {\n"
-        "        html += '<div style=\"font-size:11px;color:#666;line-height:1.35\">' + esc(primary.note) + '</div>';\n"
-        "      }\n"
-        "      if (extras.length) {\n"
-        "        html += '<div style=\"font-size:11px;color:#666;margin-top:3px\">Also: ' +\n"
-        "          extras.map(function(link) {\n"
-        "            return '<a href=\"' + esc(link.url) + '\" target=\"_blank\" rel=\"noopener noreferrer\"' +\n"
-        "              ' style=\"color:#0a58ca;text-decoration:none\">' + esc(link.label) + '</a>';\n"
-        "          }).join(' &middot; ') + '</div>';\n"
-        "      }\n"
-        "      html += '</div>';\n"
-        "      return html;\n"
-        "    }).filter(Boolean).join('');\n"
-        "    sourcePanel.innerHTML = '<div style=\"font-weight:700;font-size:13px;margin-bottom:2px\">Sources for active layers</div>' +\n"
-        "      '<div style=\"font-size:10.5px;color:#888;margin-bottom:4px\">Click <b>(Source)</b> to open the dataset / publication.</div>' +\n"
-        "      blocks;\n"
-        "  }\n"
-        "  function findOverlayInputs() {\n"
-        "    const overlayContainer = document.querySelector('.leaflet-control-layers-overlays');\n"
-        "    if (!overlayContainer) return [];\n"
-        "    return Array.prototype.slice.call(overlayContainer.querySelectorAll('input[type=\"checkbox\"]'));\n"
-        "  }\n"
-        "  function syncFromInputs(inputs) {\n"
-        "    activeLayers.clear();\n"
-        "    inputs.forEach(function(input) {\n"
-        "      if (input.checked) activeLayers.add(nameOfInput(input));\n"
-        "    });\n"
-        "  }\n"
-        "  function removeColocationFromControl() {\n"
-        "    var overlayContainer = document.querySelector('.leaflet-control-layers-overlays');\n"
-        "    if (!overlayContainer) return;\n"
-        "    var labels = Array.prototype.slice.call(overlayContainer.querySelectorAll('label'));\n"
-        "    labels.forEach(function(label) {\n"
-        "      var span = label.querySelector('span');\n"
-        "      var text = (label.dataset.fullName || (span ? span.textContent : '')).replace(/^\\s+|\\s+$/g, '');\n"
-        "      if (text.indexOf('Co-location: ') === 0) {\n"
-        "        if (label.parentNode) label.parentNode.removeChild(label);\n"
-        "      }\n"
-        "    });\n"
-        "  }\n"
-        "  function init() {\n"
-        "    var overlayContainer = document.querySelector('.leaflet-control-layers-overlays');\n"
-        "    var inputs = findOverlayInputs();\n"
-        "    if (!overlayContainer || !inputs.length) { setTimeout(init, 100); return; }\n"
-        "    inputs.forEach(function(input) {\n"
-        "      input.addEventListener('change', function() {\n"
-        "        syncFromInputs(inputs);\n"
-        "        renderPanels();\n"
-        "      });\n"
-        "    });\n"
-        "    removeColocationFromControl();\n"
-        "    syncFromInputs(inputs);\n"
-        "    renderPanels();\n"
-        "  }\n"
-        "  if (document.readyState === 'complete') {\n"
-        "    init();\n"
-        "  } else {\n"
-        "    window.addEventListener('load', init);\n"
-        "  }\n"
-        "})();\n"
+        + js_body +
         "</script>\n"
         "{% endmacro %}"
     )
