@@ -38,11 +38,16 @@ from folium.plugins import HeatMap
 from branca.colormap import LinearColormap
 from branca.element import Template, MacroElement
 
+from geo_utils import NORWAY_BBOX, clip_to_bbox
+from regions import (
+    CANONICAL_REGIONS,
+    CANONICAL_REGION_COLORS,
+    REGION_CENTROIDS,
+    canonical_region,
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-
-# Bounding box for Norwegian waters (mainland + Svalbard + EEZ)
-NORWAY_BBOX = {"lat_min": 56.5, "lat_max": 82.0, "lon_min": -5.0, "lon_max": 35.0}
 KELP_PATH = REPO_ROOT / "data" / "Norway_Macroalgae_Database.xlsm"
 SEAGRASS_PATH = REPO_ROOT / "data" / "Norway_Seagrass_ Master_Database (4).xlsx"
 OUT_PATH = REPO_ROOT / "maps" / "norway.html"
@@ -91,14 +96,6 @@ QUALITATIVE_PALETTE = [
     "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
     "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5",
 ]
-
-CANONICAL_REGIONS = ["Barents Sea", "Norwegian Sea", "Oslofjord", "Skagerrak"]
-CANONICAL_REGION_COLORS = {
-    "Barents Sea":   "#2c7fb8",
-    "Norwegian Sea": "#1b9e77",
-    "Oslofjord":     "#d95f02",
-    "Skagerrak":     "#e7298a",
-}
 
 NO_DATA_GREY = "#bbbbbb"
 
@@ -165,32 +162,6 @@ COLOCATION_CLASSES = {
         "description": "Mapped habitat with no nearby study site, pressure, or strong protection signal.",
     },
 }
-
-
-def canonical_region(region_str: str | None, lat: float | None) -> str:
-    """Normalize a free-text region label onto the four canonical Norwegian
-    blue-carbon regions used by Gagnon et al. 2024 / the roadmap doc.
-    """
-    s = (region_str or "").lower()
-    if any(k in s for k in ("barents", "porsanger", "hammerfest", "northern norway", "bodø")):
-        return "Barents Sea"
-    if "norwegian sea" in s:
-        return "Norwegian Sea"
-    if "outer oslofjord" in s or "skagerrak" in s:
-        return "Skagerrak"
-    if "oslofjord" in s:
-        return "Oslofjord"
-    if any(k in s for k in (
-        "hardanger", "sognef", "mid-norway", "north sea", "southwest norway", "west norway"
-    )):
-        return "Norwegian Sea"
-    if lat is None:
-        return "Unknown"
-    if lat >= 67:
-        return "Barents Sea"
-    if lat >= 60:
-        return "Norwegian Sea"
-    return "Skagerrak"
 
 
 def dms_to_dd(value) -> float | None:
@@ -744,11 +715,7 @@ def add_point_csv_layer(
     if country_filter and "country" in df.columns:
         df = df[df["country"].astype(str).str.lower() == country_filter.lower()].copy()
     df = df.dropna(subset=[lat_col, lon_col]).copy()
-    if bbox:
-        df = df[
-            (df[lat_col] >= bbox["lat_min"]) & (df[lat_col] <= bbox["lat_max"]) &
-            (df[lon_col] >= bbox["lon_min"]) & (df[lon_col] <= bbox["lon_max"])
-        ].copy()
+    df = clip_to_bbox(df, lat_col, lon_col, bbox)
     if max_rows is not None and len(df) > max_rows:
         df = df.head(max_rows).copy()
 
@@ -930,11 +897,7 @@ def add_fishing_heatmap_layer(
         return 0
     df = pd.read_csv(path)
     df = df.dropna(subset=[lat_col, lon_col]).copy()
-    if bbox:
-        df = df[
-            (df[lat_col] >= bbox["lat_min"]) & (df[lat_col] <= bbox["lat_max"]) &
-            (df[lon_col] >= bbox["lon_min"]) & (df[lon_col] <= bbox["lon_max"])
-        ].copy()
+    df = clip_to_bbox(df, lat_col, lon_col, bbox)
     if weight_col and weight_col in df.columns:
         w = pd.to_numeric(df[weight_col], errors="coerce").fillna(0).clip(lower=0)
         cap = w.quantile(0.95) or 1.0
@@ -970,11 +933,7 @@ def add_port_traffic_layer(
     if country_filter and "country" in df.columns:
         df = df[df["country"].astype(str).str.upper() == country_filter.upper()].copy()
     df = df.dropna(subset=["_lat", "_lon"]).copy()
-    if bbox:
-        df = df[
-            (df["_lat"] >= bbox["lat_min"]) & (df["_lat"] <= bbox["lat_max"]) &
-            (df["_lon"] >= bbox["lon_min"]) & (df["_lon"] <= bbox["lon_max"])
-        ].copy()
+    df = clip_to_bbox(df, "_lat", "_lon", bbox)
     if df.empty:
         return 0
     df["nofvessels"] = pd.to_numeric(df["nofvessels"], errors="coerce").fillna(0)
@@ -1025,11 +984,7 @@ def add_sedimentation_layer(fmap: folium.Map, path: Path, bbox: dict | None = No
     df = pd.read_csv(path)
     df = df[df["country"].astype(str).str.lower() == "norway"].copy()
     df = df.dropna(subset=["latitude", "longitude"]).copy()
-    if bbox:
-        df = df[
-            (df["latitude"] >= bbox["lat_min"]) & (df["latitude"] <= bbox["lat_max"]) &
-            (df["longitude"] >= bbox["lon_min"]) & (df["longitude"] <= bbox["lon_max"])
-        ].copy()
+    df = clip_to_bbox(df, "latitude", "longitude", bbox)
     if df.empty:
         return 0
     df["sed_rate"] = pd.to_numeric(df["sedimentation_rate"], errors="coerce")
@@ -1209,11 +1164,7 @@ def add_fish_habitat_layer(fmap: folium.Map, path: Path, bbox: dict | None = Non
     df["_lon"] = pd.to_numeric(df["longitude"], errors="coerce")
     df["_prob"] = pd.to_numeric(df["probability_of_occurrence"], errors="coerce")
     df = df.dropna(subset=["_lat", "_lon", "_prob"]).copy()
-    if bbox:
-        df = df[
-            (df["_lat"] >= bbox["lat_min"]) & (df["_lat"] <= bbox["lat_max"]) &
-            (df["_lon"] >= bbox["lon_min"]) & (df["_lon"] <= bbox["lon_max"])
-        ].copy()
+    df = clip_to_bbox(df, "_lat", "_lon", bbox)
     if df.empty:
         return 0
     # Aggregate: mean probability per grid cell across all species
@@ -1557,17 +1508,6 @@ def step2_summary_html() -> str:
         "<div style='font-weight:600;margin:8px 0 4px'>Step 2 — Ecosystem services</div>"
         + "".join(f"<div style='font-size:11px;color:#555;line-height:1.5'>{r}</div>" for r in rows)
     )
-
-
-# Region centroids for Step 2 bubble layer (approximate geographic centres of each
-# canonical region as used in the roadmap, placed in open water to avoid overlap
-# with site markers).
-REGION_CENTROIDS = {
-    "Barents Sea":   (71.0, 27.0),
-    "Norwegian Sea": (64.5,  7.5),
-    "Oslofjord":     (59.5, 10.6),
-    "Skagerrak":     (58.1,  7.8),
-}
 
 
 def add_step2_regional_layer(fmap: folium.Map) -> bool:
