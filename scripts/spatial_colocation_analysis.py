@@ -28,6 +28,8 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
 
+from regions import CANONICAL_REGIONS, canonical_region
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO_ROOT / "data" / "processed" / "spatial_analysis"
