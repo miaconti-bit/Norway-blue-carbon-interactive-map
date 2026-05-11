@@ -28,6 +28,8 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
 
+from regions import CANONICAL_REGIONS, canonical_region
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO_ROOT / "data" / "processed" / "spatial_analysis"
@@ -56,29 +58,6 @@ OUT_MANIFEST = OUT_DIR / "spatial_colocation_manifest.json"
 CRS_WGS84 = "EPSG:4326"
 CRS_METERS = "EPSG:32633"
 BUFFER_DISTANCES_M = [1000, 5000, 10000]
-
-CANONICAL_REGIONS = ["Barents Sea", "Norwegian Sea", "Oslofjord", "Skagerrak"]
-
-
-def canonical_region(region_str: str | None, lat: float | None) -> str:
-    s = (region_str or "").lower()
-    if any(k in s for k in ("barents", "porsanger", "hammerfest", "northern norway", "bodø")):
-        return "Barents Sea"
-    if "norwegian sea" in s:
-        return "Norwegian Sea"
-    if "outer oslofjord" in s or "skagerrak" in s:
-        return "Skagerrak"
-    if "oslofjord" in s:
-        return "Oslofjord"
-    if any(k in s for k in ("hardanger", "sognef", "mid-norway", "north sea", "southwest norway", "west norway")):
-        return "Norwegian Sea"
-    if lat is None or pd.isna(lat):
-        return "Unknown"
-    if lat >= 67:
-        return "Barents Sea"
-    if lat >= 60:
-        return "Norwegian Sea"
-    return "Skagerrak"
 
 
 def read_habitat(path: Path, ecosystem: str, habitat_type: str) -> gpd.GeoDataFrame:
