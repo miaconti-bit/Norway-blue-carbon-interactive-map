@@ -25,6 +25,13 @@ VERN_CSV = VERN_DIR / "verneomraader_features.csv"
 VERN_ALL_OUT = OUT_DIR / "verneomraader_marine_map.geojson"
 VERN_MPA_OUT = OUT_DIR / "verneomraader_mpa_map.geojson"
 
+# See prepare_hb19_map_layers.py for the rationale on simplifying in metres
+# rather than degrees. Protected-area polygons are much larger than habitat
+# polygons, so a coarser tolerance is fine.
+CRS_WGS84 = "EPSG:4326"
+CRS_METERS = "EPSG:32633"
+DEFAULT_TOLERANCE_M = 100
+
 KEEP_COLUMNS = [
     "naturvernId",
     "navn",
@@ -41,7 +48,14 @@ KEEP_COLUMNS = [
 ]
 
 
-def prepare_verneomraader(tolerance: float = 0.001) -> tuple[int, int]:
+def simplify_in_meters(gdf: gpd.GeoDataFrame, tolerance_m: float) -> gpd.GeoDataFrame:
+    """Reproject to UTM 33N, simplify with a metre-based tolerance, project back."""
+    metric = gdf.to_crs(CRS_METERS)
+    metric["geometry"] = metric.geometry.simplify(tolerance_m, preserve_topology=True)
+    return metric.to_crs(CRS_WGS84)
+
+
+def prepare_verneomraader(tolerance_m: float = DEFAULT_TOLERANCE_M) -> tuple[int, int]:
     if not VERN_GEOJSON.exists():
         raise FileNotFoundError(f"Missing protected-area GeoJSON: {VERN_GEOJSON}")
     if not VERN_CSV.exists():
@@ -53,13 +67,13 @@ def prepare_verneomraader(tolerance: float = 0.001) -> tuple[int, int]:
     gdf["is_mpa"] = gdf["is_mpa"].fillna(False).astype(bool)
 
     if gdf.crs is None:
-        gdf = gdf.set_crs("EPSG:4326")
+        gdf = gdf.set_crs(CRS_WGS84)
     else:
-        gdf = gdf.to_crs("EPSG:4326")
+        gdf = gdf.to_crs(CRS_WGS84)
 
     keep = [c for c in KEEP_COLUMNS if c in gdf.columns]
     gdf = gdf[keep].copy()
-    gdf["geometry"] = gdf.geometry.simplify(tolerance, preserve_topology=True)
+    gdf = simplify_in_meters(gdf, tolerance_m)
     gdf = gdf[~gdf.geometry.is_empty & gdf.geometry.notna()].copy()
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -70,6 +84,7 @@ def prepare_verneomraader(tolerance: float = 0.001) -> tuple[int, int]:
 
 
 def main() -> None:
+    print(f"Preparing protected areas (tolerance: {DEFAULT_TOLERANCE_M} m in EPSG:32633)...", flush=True)
     all_count, mpa_count = prepare_verneomraader()
     print(f"Wrote {VERN_ALL_OUT} ({all_count} features)")
     print(f"Wrote {VERN_MPA_OUT} ({mpa_count} features)")
