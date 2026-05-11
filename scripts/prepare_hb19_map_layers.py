@@ -19,6 +19,23 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 HB19_DIR = REPO_ROOT / "data" / "external" / "naturbase_hb19"
 OUT_DIR = HB19_DIR / "map_layers"
 
+# Project to UTM 33N before simplification so the tolerance has uniform
+# meaning across the full Norwegian latitude range. Simplifying in degrees
+# stretches non-uniformly: at 70°N a degree of longitude is ~38 km vs. ~111 km
+# at the equator, so a degree-based tolerance over-simplifies small features
+# in the longitudinal direction. Matches the CRS used by
+# spatial_colocation_analysis.py.
+CRS_WGS84 = "EPSG:4326"
+CRS_METERS = "EPSG:32633"
+
+# Per-layer simplification tolerance in metres. Eelgrass meadows are smaller
+# and benefit from a tighter tolerance; kelp polygons are larger and tolerate
+# more aggressive simplification.
+TOLERANCE_M = {
+    "alegras": 30,
+    "tare": 75,
+}
+
 INPUTS = {
     "alegras": HB19_DIR / "naturbase_hb19_alegras.geojson",
     "tare": HB19_DIR / "naturbase_hb19_tare.geojson",
@@ -54,7 +71,14 @@ NATURTYPE_LABELS = {
 }
 
 
-def prepare_layer(key: str, tolerance: float) -> int:
+def simplify_in_meters(gdf: gpd.GeoDataFrame, tolerance_m: float) -> gpd.GeoDataFrame:
+    """Reproject to UTM 33N, simplify with a metre-based tolerance, project back."""
+    metric = gdf.to_crs(CRS_METERS)
+    metric["geometry"] = metric.geometry.simplify(tolerance_m, preserve_topology=True)
+    return metric.to_crs(CRS_WGS84)
+
+
+def prepare_layer(key: str, tolerance_m: float) -> int:
     src = INPUTS[key]
     dst = OUTPUTS[key]
     if not src.exists():
@@ -64,9 +88,9 @@ def prepare_layer(key: str, tolerance: float) -> int:
     keep = [c for c in KEEP_COLUMNS if c in gdf.columns]
     gdf = gdf[keep].copy()
     if gdf.crs is None:
-        gdf = gdf.set_crs("EPSG:4326")
+        gdf = gdf.set_crs(CRS_WGS84)
     else:
-        gdf = gdf.to_crs("EPSG:4326")
+        gdf = gdf.to_crs(CRS_WGS84)
 
     gdf["verdi_label"] = gdf["verdi"].map(VALUE_LABELS).fillna("")
     gdf["naturtype_label"] = gdf["naturtype"].map(NATURTYPE_LABELS).fillna("")
@@ -74,9 +98,7 @@ def prepare_layer(key: str, tolerance: float) -> int:
     if "SHAPE.STArea()" in gdf.columns:
         gdf = gdf.drop(columns=["SHAPE.STArea()"])
 
-    # Use a small tolerance in decimal degrees. This keeps visual coast-scale
-    # placement while shrinking the self-contained Folium HTML substantially.
-    gdf["geometry"] = gdf.geometry.simplify(tolerance, preserve_topology=True)
+    gdf = simplify_in_meters(gdf, tolerance_m)
     gdf = gdf[~gdf.geometry.is_empty & gdf.geometry.notna()].copy()
 
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -87,8 +109,9 @@ def prepare_layer(key: str, tolerance: float) -> int:
 def main() -> None:
     counts = {}
     for key in ("alegras", "tare"):
-        print(f"Preparing {key}...", flush=True)
-        counts[key] = prepare_layer(key, tolerance=0.001)
+        tol = TOLERANCE_M[key]
+        print(f"Preparing {key} (tolerance: {tol} m in EPSG:32633)...", flush=True)
+        counts[key] = prepare_layer(key, tolerance_m=tol)
         print(f"  wrote {OUTPUTS[key]} ({counts[key]} features)", flush=True)
 
 
