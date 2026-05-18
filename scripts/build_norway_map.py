@@ -80,6 +80,7 @@ SEABED_EROSION_PATH = REPO_ROOT / "data" / "Seabed_erosion.csv"
 FISH_HABITAT_PATH = REPO_ROOT / "data" / "CommercialFish_Habitat_projections_climatechange.csv"
 SEDIMENTATION_PATH = REPO_ROOT / "data" / "Sedimentation_rates.csv"
 COASTAL_RESILIENCE_PATH = REPO_ROOT / "data" / "Coastal_resilience_vulnerability.csv"
+ERS_FISHING_PATH = REPO_ROOT / "data" / "external" / "ers" / "ers_fishing_effort.csv"
 
 # Decimal-degree coordinates from Gagnon et al. 2024 supplementary Table S1.
 SEAGRASS_COORDS: dict[str, tuple[float, float]] = {
@@ -136,6 +137,7 @@ CONTEXT_POINT_STYLE = {
     "coastal_resilience": {"color": "#9ebcda", "radius": 4, "label": "Coastal resilience/vulnerability index"},
     "seabed_erosion": {"color": "#8B4513", "radius": 4, "label": "Seabed erosion areas (EMODnet)"},
     "fish_habitat": {"color": "#20B2AA", "radius": 3, "label": "Fish habitat suitability (climate projection)"},
+    "ers_fishing": {"color": "#d94801", "radius": 3, "label": "Norwegian fishing effort — ERS (kW·h, 0.05° grid)"},
 }
 
 COLOCATION_CLASSES = {
@@ -1261,6 +1263,7 @@ def context_legend_html(counts: dict[str, int]) -> str:
         "bottom_trawls", "bottom_otter_trawls", "bottom_seines",
         "offshore_drilling", "port_traffic",
         "sedimentation", "coastal_resilience", "seabed_erosion", "fish_habitat",
+        "ers_fishing",
     ):
         count = counts.get(key, 0)
         if not count:
@@ -1597,6 +1600,13 @@ def base_source_links() -> dict[str, list[dict[str, str]]]:
             "Co-benefit and ecological-condition indicators.",
         ),
     ]
+    ers = [
+        source_link(
+            "Fiskeridirektoratet — ERS open data",
+            "https://www.fiskeridir.no/statistikk-tall-og-analyse/data-og-statistikk-om-yrkesfiske/apne-data-elektronisk-rapportering-ers",
+            "Electronic reporting system catch messages (DCA) for Norwegian fishing vessels ≥15 m.",
+        ),
+    ]
     colocation = hb19 + protected + akvakultur + emodnet + study
     return {
         "study": study,
@@ -1607,6 +1617,7 @@ def base_source_links() -> dict[str, list[dict[str, str]]]:
         "emodnet": emodnet,
         "massimal": massimal,
         "step2": step2,
+        "ers": ers,
         "colocation": colocation,
     }
 
@@ -1732,6 +1743,11 @@ def main() -> None:
         "coastal_resilience": add_cvi_layer(fmap, COASTAL_RESILIENCE_PATH, bbox=NORWAY_BBOX),
         "seabed_erosion": add_seabed_erosion_layer(fmap, SEABED_EROSION_PATH, bbox=NORWAY_BBOX),
         "fish_habitat": add_fish_habitat_layer(fmap, FISH_HABITAT_PATH, bbox=NORWAY_BBOX),
+        "ers_fishing": add_fishing_heatmap_layer(
+            fmap, ERS_FISHING_PATH, "ers_fishing",
+            "Norwegian fishing effort: ERS 2019–2023 (kW·h, 0.05° grid)",
+            weight_col="effort_kwh", bbox=NORWAY_BBOX,
+        ),
     }
     colocation_counts = add_colocation_layers(fmap)
     step2_layer_added = add_step2_regional_layer(fmap)
@@ -1824,6 +1840,7 @@ def main() -> None:
         ("coastal_resilience", f"Coastal resilience/vulnerability index ({context_counts.get('coastal_resilience', 0):,})", source_groups["emodnet"]),
         ("seabed_erosion", f"Seabed erosion areas ({context_counts.get('seabed_erosion', 0):,})", source_groups["emodnet"]),
         ("fish_habitat", f"Fish habitat suitability: Norwegian waters (heatmap, {context_counts.get('fish_habitat', 0):,} cells)", source_groups["emodnet"]),
+        ("ers_fishing", f"Norwegian fishing effort: ERS 2019–2023 ({context_counts.get('ers_fishing', 0):,} grid cells)", source_groups["ers"]),
     ]
     for key, layer_name, sources in context_layer_info:
         add_layer_metadata(layer_name, context_legend_html({key: context_counts.get(key, 0)}), sources)

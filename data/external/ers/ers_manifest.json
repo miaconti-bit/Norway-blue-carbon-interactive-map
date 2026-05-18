@@ -1,0 +1,21 @@
+{
+  "source_name": "Fiskeridir Electronic Reporting System (ERS) — DCA catch messages",
+  "years": [
+    2019,
+    2020,
+    2021,
+    2022,
+    2023
+  ],
+  "grid_resolution_deg": 0.05,
+  "bbox": [
+    -5.0,
+    56.5,
+    35.0,
+    82.0
+  ],
+  "n_hauls": 255387,
+  "n_grid_cells": 43802,
+  "license": "Norwegian Directorate of Fisheries (Fiskeridir) — Norwegian Open Data License (NLOD)",
+  "fetched_at": "2026-05-18T06:58:49.562746+00:00"
+}
