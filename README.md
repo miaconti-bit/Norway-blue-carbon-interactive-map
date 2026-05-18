@@ -53,7 +53,8 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | Coastal resilience/vulnerability index | EMODnet Geology|
 | Seabed erosion areas | EMODnet Geology|
 | Fish habitat suitability (climate projection) | EMODnet Biology|
-| Step 2: Carbon stocks by region | Canonical regions per Gagnon et al 2024 |
+| Fishing effort | Fiskeridirektoratet ERS 2019–2023|
+| Carbon stocks by region | Canonical regions per Gagnon et al 2024 |
 | NGU: Sediment OC stocks – North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
 | NGU: Sediment OC stocks – Norwegian shelf | Norges geologiske undersøkelse (NGU) |
 | NGU: OC accumulation rates – North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
