@@ -198,8 +198,8 @@ def add_summary_panel(fig, regional: pd.DataFrame, metrics: pd.DataFrame) -> Non
         0,
         0.02,
         "Pressure score is a transparent screening index\n"
-        "from dredging, aquaculture, platforms and windfarms.\n"
-        "It is not an ecological impact model.",
+        "from dredging, aquaculture, fishing (ERS), platforms\n"
+        "and windfarms. It is not an ecological impact model.",
         fontsize=8.5,
         color="#666",
         va="bottom",
