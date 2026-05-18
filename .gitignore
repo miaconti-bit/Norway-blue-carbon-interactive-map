@@ -71,3 +71,6 @@ maps/norway.html
 
 # ── Spain test data (not part of Norway project) ─────────────────────────────
 data/external/emodnet_spain/
+
+# Local Netlify folder
+.netlify

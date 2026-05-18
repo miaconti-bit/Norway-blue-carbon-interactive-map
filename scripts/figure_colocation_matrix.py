@@ -285,7 +285,7 @@ def panel_b_pressure_decomp(ax, df: pd.DataFrame) -> None:
 
     legend_handles = [mpatches.Patch(facecolor=c, edgecolor="#666", linewidth=0.5, label=lbl)
                       for (_, lbl), c in zip(components, component_palette)]
-    ax.legend(handles=legend_handles, loc="lower right",
+    ax.legend(handles=legend_handles, loc="upper right",
               ncol=1, frameon=True, fontsize=8,
               framealpha=0.92, edgecolor="#ccc")
 
