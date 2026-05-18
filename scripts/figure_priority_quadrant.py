@@ -197,7 +197,7 @@ def panel_a_stocks(ax, df):
     ax.set_xticks(x)
     ax.set_xticklabels([short[r] for r in pivot.index], fontsize=9)
     ax.set_ylabel("Carbon stock (GgC)")
-    ax.set_title("A. Where the carbon is", loc="left", fontweight="bold", fontsize=11)
+    ax.set_title("A  Regional Carbon Stock", loc="left", fontweight="bold", fontsize=11)
     ax.legend(loc="upper right", frameon=False, fontsize=8)
     ymax = (kelp_vals + sg_vals).max()
     for xi, kv, sv in zip(x, kelp_vals, sg_vals):
@@ -255,7 +255,7 @@ def panel_b_pressure(ax, df):
     ax.invert_yaxis()
     ax.axvline(0, color="black", linewidth=0.7)
     ax.set_xlabel("Pressure z-score (signed sum)", fontsize=9)
-    ax.set_title("B. Where the pressure is", loc="left", fontweight="bold", fontsize=11)
+    ax.set_title("B  Pressure Decomposition by Region and Habitat", loc="left", fontweight="bold", fontsize=11)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     legend_handles = [Patch(color=c, label=lbl)
@@ -319,12 +319,9 @@ def _jitter(values: np.ndarray, scale: float, seed: int = 7) -> np.ndarray:
     return values + rng.uniform(-scale, scale, size=len(values))
 
 
-def panel_d_quadrant(axes, sites_df, regional_df):
-    """Per-site scatter on Risk × Co-benefit axes, two stacked subpanels.
-
-    sites_df: per-site composites (per_site_priority_metrics.csv loaded)
-    regional_df: regional aggregates (still used for the kelp regional median crosshair)
-    """
+def panel_d_quadrant(axes, sites_df, regional_df,
+                     label_top_n_kelp=3, label_top_n_sg=4):
+    """Per-site scatter on Risk × Co-benefit axes, two stacked subpanels."""
     ax_kelp, ax_sg = axes
 
     def draw(ax, eco, title, show_xlabel=False, label_top_n=None):
@@ -392,17 +389,22 @@ def panel_d_quadrant(axes, sites_df, regional_df):
         ax.scatter(x, y, s=sizes, c=colors, edgecolor="black", linewidth=0.9,
                    zorder=3, alpha=0.85)
 
-        # Selective labelling: top-N by absolute distance from origin (most extreme sites)
+        # Label sites: all when label_top_n >= len(sub), else top-N by extremity
         if label_top_n:
+            n_label = min(label_top_n, len(sub))
             extremity = np.sqrt(x_raw ** 2 + y_raw ** 2)
-            top = np.argsort(extremity)[-label_top_n:]
-            for i in top:
-                name = str(sub.iloc[i]["site_name"])[:18]
+            top = np.argsort(extremity)[-n_label:]
+            # Alternate offsets so nearby points don't pile up
+            offsets = [(8, 8), (-8, 8), (8, -12), (-8, -12), (14, 2), (-14, 2)]
+            for rank, i in enumerate(top):
+                name = str(sub.iloc[i]["site_name"])[:16]
+                dx, dy = offsets[rank % len(offsets)]
                 ax.annotate(name, (x[i], y[i]),
-                            xytext=(6, 6), textcoords="offset points",
-                            fontsize=7.5, fontweight="bold", zorder=4,
-                            bbox=dict(boxstyle="round,pad=0.18", facecolor="white",
-                                      edgecolor="#bbb", alpha=0.9, linewidth=0.4))
+                            xytext=(dx, dy), textcoords="offset points",
+                            fontsize=7, fontweight="bold", zorder=4,
+                            arrowprops=dict(arrowstyle="-", color="#aaa", lw=0.6),
+                            bbox=dict(boxstyle="round,pad=0.15", facecolor="white",
+                                      edgecolor="#ccc", alpha=0.92, linewidth=0.4))
 
         # Site count annotation (bottom right of quadrant area)
         ax.text(xmax - (xmax - xmin) * 0.02, ymin + (ymax - ymin) * 0.13,
@@ -415,9 +417,10 @@ def panel_d_quadrant(axes, sites_df, regional_df):
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
-    draw(ax_kelp, "macroalgae", "D. Priority quadrant — Kelp sites", label_top_n=3)
-    draw(ax_sg, "seagrass", "     Priority quadrant — Seagrass sites",
-         show_xlabel=True, label_top_n=4)
+    draw(ax_kelp, "macroalgae", "Priority quadrant — Kelp sites",
+         label_top_n=label_top_n_kelp)
+    draw(ax_sg, "seagrass", "Priority quadrant — Seagrass sites",
+         show_xlabel=True, label_top_n=label_top_n_sg)
 
     # Legends
     region_keys = ["Barents Sea", "Norwegian Sea", "Oslofjord", "Skagerrak"]
@@ -488,26 +491,64 @@ def render(df: pd.DataFrame, sites_df: pd.DataFrame) -> Path:
     return out_png
 
 
+def render_report(df: pd.DataFrame, sites_df: pd.DataFrame) -> Path:
+    """Two-panel synthesis: carbon stocks (A) and pressure decomposition (B)."""
+    fig = plt.figure(figsize=(13, 7))
+    gs = GridSpec(
+        1, 2, figure=fig,
+        width_ratios=[1.0, 1.4],
+        wspace=0.38,
+        left=0.07, right=0.97, top=0.88, bottom=0.10,
+    )
+    ax_a = fig.add_subplot(gs[0, 0])
+    ax_b = fig.add_subplot(gs[0, 1])
+
+    panel_a_stocks(ax_a, df)
+    panel_b_pressure(ax_b, df)
+
+    # Move Panel B legend inside the panel (top right) to avoid footnote collision
+    ax_b.get_legend().remove()
+    components = [
+        ("dredging_per_km2_z", "Dredging /km²"),
+        ("akvakultur_per_km2_z", "Aquaculture /km²"),
+        ("platforms_10km_z", "Platforms (10 km)"),
+        ("lack_of_protection_z", "Unprotected share"),
+    ]
+    component_palette = ["#4292c6", "#fd8d3c", "#74c476", "#9e9ac8"]
+    legend_handles = [Patch(color=c, label=lbl)
+                      for (_, lbl), c in zip(components, component_palette)]
+    ax_b.legend(handles=legend_handles, loc="lower right",
+                ncol=1, frameon=True, fontsize=8,
+                framealpha=0.92, edgecolor="#ccc")
+
+    fig.suptitle(
+        "Norway Blue Carbon: Regional Carbon Stocks and Anthropogenic Pressure",
+        fontsize=14, fontweight="bold", y=0.97,
+    )
+    fig.text(
+        0.5, 0.025,
+        "Panel A: Total carbon stock (Gg C) by region and habitat type (kelp + seagrass). "
+        "Panel B: Pressure components (z-scored within habitat group); bars show signed contribution of each driver. "
+        "Oslofjord sites are included in the Skagerrak aggregate.",
+        fontsize=7.5, color="#666", ha="center", style="italic",
+    )
+
+    out_png = FIG / "figure_priority_synthesis.png"
+    out_pdf = FIG / "figure_priority_synthesis.pdf"
+    fig.savefig(out_png, dpi=200, bbox_inches="tight")
+    fig.savefig(out_pdf, bbox_inches="tight")
+    plt.close(fig)
+    return out_png
+
+
 def main():
     df = regional_stocks()
     df = add_composites(df)
     df.to_csv(PROC / "regional_priority_metrics.csv", index=False)
-
-    sites_path = PROC / "per_site_priority_metrics.csv"
-    if not sites_path.exists():
-        raise FileNotFoundError(
-            f"missing {sites_path} — run scripts/per_site_priority_metrics.py first"
-        )
-    sites_df = pd.read_csv(sites_path)
-
-    out = render(df, sites_df)
-    print(f"wrote {out}")
     print(f"wrote {PROC / 'regional_priority_metrics.csv'}")
     print()
     print(df[["ecosystem", "canonical_region", "stock_GgC",
               "risk_score", "cobenefit_score"]].to_string(index=False))
-    print()
-    print("per-site panel D:", sites_df.groupby("ecosystem").size().to_dict())
 
 
 if __name__ == "__main__":
