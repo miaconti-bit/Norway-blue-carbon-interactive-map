@@ -300,7 +300,7 @@ def render(df: pd.DataFrame) -> Path:
         1, 2, figure=fig,
         width_ratios=[1.0, 1.1],
         wspace=0.42,
-        left=0.09, right=0.97, top=0.82, bottom=0.10,
+        left=0.09, right=0.97, top=0.82, bottom=0.17,
     )
 
     ax_a = fig.add_subplot(gs[0, 0])
