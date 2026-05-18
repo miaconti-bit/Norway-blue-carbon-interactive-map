@@ -14,6 +14,7 @@
     "akvakultur": "data/external/akvakultur/akvakultur_marine_sites.csv",
     "platforms": "data/external/emodnet/emodnet_platforms.csv",
     "windfarms": "data/external/emodnet/emodnet_windfarms.csv",
+    "ers_fishing": "data/external/ers/ers_fishing_effort.csv",
     "study_sites": "data/processed/norway_blue_carbon_master_sites.csv"
   },
   "outputs": {
@@ -24,6 +25,7 @@
   },
   "notes": [
     "Pressure index is a transparent screening score, not an ecological impact model.",
+    "Fishing pressure uses ERS DCA 2019-2023 effort grid (\u226575th percentile cells by kW\u00b7h); buffer proximity to habitat implicitly selects coastal/nearshore grounds.",
     "Exact overlap with point pressure data is avoided; buffer counts and nearest distances are more informative.",
     "Canonical regions are approximated from habitat polygon centroid latitude where source region is absent.",
     "Three protection tiers: percent_protected (any verneomrade, n=884; permissive), percent_substantive (Marint Verneomraade + Nasjonalpark + IUCN Ib/II, n~42; enforceable marine regulation), percent_mpa (MarintVerneomraade only, n=18; strict). Use percent_mpa for effective marine protection."

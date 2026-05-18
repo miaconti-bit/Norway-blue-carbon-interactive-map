@@ -47,7 +47,13 @@ EMODNET_DIR = REPO_ROOT / "data" / "external" / "emodnet"
 DREDGING_PATH = EMODNET_DIR / "emodnet_dredging.csv"
 PLATFORMS_PATH = EMODNET_DIR / "emodnet_platforms.csv"
 WINDFARMS_PATH = EMODNET_DIR / "emodnet_windfarms.csv"
+ERS_FISHING_PATH = REPO_ROOT / "data" / "external" / "ers" / "ers_fishing_effort.csv"
 MASTER_SITES_PATH = REPO_ROOT / "data" / "processed" / "norway_blue_carbon_master_sites.csv"
+
+# Effort percentile above which a grid cell is treated as a meaningful
+# fishing pressure point. Lower = more cells included; 75th keeps the
+# top quarter of effort, which concentrates on coastal fishing grounds.
+ERS_EFFORT_PERCENTILE = 75
 
 OUT_HABITAT_METRICS = OUT_DIR / "habitat_colocation_metrics.csv"
 OUT_PROTECTION_OVERLAPS = OUT_DIR / "habitat_protection_overlaps.csv"
@@ -138,6 +144,26 @@ def read_points_csv(
     geometry = [Point(float(lon), float(lat)) for lon, lat in zip(df[lon_col], df[lat_col])]
     gdf = gpd.GeoDataFrame(df, geometry=geometry, crs=CRS_WGS84)
     gdf["layer_name"] = layer_name
+    return gdf
+
+
+def read_ers_fishing(path: Path, effort_percentile: int = ERS_EFFORT_PERCENTILE) -> gpd.GeoDataFrame:
+    """Load ERS fishing-effort grid, keeping only high-effort cells.
+
+    Cells below the effort percentile threshold are dropped so the pressure
+    index reflects concentrated fishing grounds rather than background noise.
+    The buffer approach (1–10 km around habitat polygons) then implicitly
+    selects only cells near the coast, where blue-carbon habitats occur.
+    """
+    if not path.exists():
+        return gpd.GeoDataFrame(columns=["layer_name", "effort_kwh", "geometry"], geometry="geometry", crs=CRS_WGS84)
+    df = pd.read_csv(path)
+    df["effort_kwh"] = pd.to_numeric(df["effort_kwh"], errors="coerce").fillna(0)
+    threshold = df["effort_kwh"].quantile(effort_percentile / 100)
+    df = df[df["effort_kwh"] >= threshold].copy()
+    geometry = [Point(float(lon), float(lat)) for lon, lat in zip(df["lon"], df["lat"])]
+    gdf = gpd.GeoDataFrame(df, geometry=geometry, crs=CRS_WGS84)
+    gdf["layer_name"] = "ers_fishing"
     return gdf
 
 
@@ -266,6 +292,9 @@ def build_regional_summary(metrics: pd.DataFrame) -> pd.DataFrame:
         "akvakultur_within_5km_n",
         "akvakultur_within_10km_n",
         "platforms_within_10km_n",
+        "fishing_within_1km_n",
+        "fishing_within_5km_n",
+        "fishing_within_10km_n",
         "study_sites_within_1km_n",
         "study_sites_within_5km_n",
     ]
@@ -310,6 +339,8 @@ def main() -> None:
     akvakultur = read_points_csv(AKVAKULTUR_PATH, "akvakultur")
     platforms = read_points_csv(PLATFORMS_PATH, "platforms")
     windfarms = read_points_csv(WINDFARMS_PATH, "windfarms")
+    ers_fishing = read_ers_fishing(ERS_FISHING_PATH)
+    print(f"ERS fishing pressure cells (≥{ERS_EFFORT_PERCENTILE}th percentile): {len(ers_fishing):,}")
     study_sites = read_study_sites()
 
     habitat_m = habitat.to_crs(CRS_METERS)
@@ -320,6 +351,7 @@ def main() -> None:
     akvakultur_m = akvakultur.to_crs(CRS_METERS)
     platforms_m = platforms.to_crs(CRS_METERS)
     windfarms_m = windfarms.to_crs(CRS_METERS)
+    ers_fishing_m = ers_fishing.to_crs(CRS_METERS)
     study_sites_m = study_sites.to_crs(CRS_METERS)
 
     base = pd.DataFrame(
@@ -355,10 +387,12 @@ def main() -> None:
             nearest_distance_m(habitat_m, akvakultur_m, "nearest_akvakultur_distance_m"),
             nearest_distance_m(habitat_m, platforms_m, "nearest_platform_distance_m"),
             nearest_distance_m(habitat_m, windfarms_m, "nearest_windfarm_distance_m"),
+            nearest_distance_m(habitat_m, ers_fishing_m, "nearest_fishing_distance_m"),
             point_counts_within_buffers(habitat_m, dredging_m, "dredging"),
             point_counts_within_buffers(habitat_m, akvakultur_m, "akvakultur"),
             point_counts_within_buffers(habitat_m, platforms_m, "platforms"),
             point_counts_within_buffers(habitat_m, windfarms_m, "windfarms"),
+            point_counts_within_buffers(habitat_m, ers_fishing_m, "fishing"),
             point_counts_within_buffers(habitat_m, study_sites_m, "study_sites"),
         ],
     )
@@ -373,6 +407,8 @@ def main() -> None:
     ).clip(upper=100)
 
     # A transparent first-pass pressure/protection index for ranking, not final inference.
+    # Fishing terms use ERS effort grid (≥75th percentile cells), weighted the
+    # same as dredging — both are direct physical disturbance to habitat.
     metrics["colocation_pressure_index"] = (
         metrics["dredging_within_1km_n"] * 3
         + metrics["dredging_within_5km_n"]
@@ -380,6 +416,8 @@ def main() -> None:
         + metrics["akvakultur_within_5km_n"]
         + metrics["platforms_within_10km_n"]
         + metrics["windfarms_within_10km_n"]
+        + metrics["fishing_within_1km_n"] * 3
+        + metrics["fishing_within_5km_n"]
     )
     metrics["evidence_gap_flag"] = metrics["study_sites_within_5km_n"] == 0
     metrics["high_pressure_low_protection_flag"] = (
@@ -422,6 +460,7 @@ def main() -> None:
             "akvakultur": str(AKVAKULTUR_PATH.relative_to(REPO_ROOT)),
             "platforms": str(PLATFORMS_PATH.relative_to(REPO_ROOT)),
             "windfarms": str(WINDFARMS_PATH.relative_to(REPO_ROOT)),
+            "ers_fishing": str(ERS_FISHING_PATH.relative_to(REPO_ROOT)),
             "study_sites": str(MASTER_SITES_PATH.relative_to(REPO_ROOT)),
         },
         "outputs": {
@@ -432,6 +471,7 @@ def main() -> None:
         },
         "notes": [
             "Pressure index is a transparent screening score, not an ecological impact model.",
+            f"Fishing pressure uses ERS DCA 2019-2023 effort grid (≥{ERS_EFFORT_PERCENTILE}th percentile cells by kW·h); buffer proximity to habitat implicitly selects coastal/nearshore grounds.",
             "Exact overlap with point pressure data is avoided; buffer counts and nearest distances are more informative.",
             "Canonical regions are approximated from habitat polygon centroid latitude where source region is absent.",
             "Three protection tiers: percent_protected (any verneomrade, n=884; permissive), "

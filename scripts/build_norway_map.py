@@ -827,6 +827,10 @@ def add_massimal_layer(fmap: folium.Map, path: Path) -> int:
     return len(sites)
 
 
+_GRADIENT_RED = {0.35: "#fed976", 0.6: "#fd8d3c", 0.8: "#f03b20", 1.0: "#bd0026"}
+_GRADIENT_BLUE = {0.35: "#c6dbef", 0.6: "#6baed6", 0.8: "#2171b5", 1.0: "#08306b"}
+
+
 def add_fishing_heatmap_layer(
     fmap: folium.Map,
     path: Path,
@@ -836,6 +840,7 @@ def add_fishing_heatmap_layer(
     lon_col: str = "lon",
     weight_col: str | None = "mw_fshn",
     bbox: dict | None = None,
+    gradient: dict | None = None,
 ) -> int:
     if not path.exists():
         print(f"  warning: fishing heatmap CSV not found: {path}")
@@ -856,7 +861,7 @@ def add_fishing_heatmap_layer(
         min_opacity=0.2,
         radius=20,
         blur=18,
-        gradient={0.35: "#fed976", 0.6: "#fd8d3c", 0.8: "#f03b20", 1.0: "#bd0026"},
+        gradient=gradient if gradient is not None else _GRADIENT_RED,
     ).add_to(fg)
     fg.add_to(fmap)
     return len(df)
@@ -1746,7 +1751,7 @@ def main() -> None:
         "ers_fishing": add_fishing_heatmap_layer(
             fmap, ERS_FISHING_PATH, "ers_fishing",
             "Norwegian fishing effort: ERS 2019–2023 (kW·h, 0.05° grid)",
-            weight_col="effort_kwh", bbox=NORWAY_BBOX,
+            weight_col="effort_kwh", bbox=NORWAY_BBOX, gradient=_GRADIENT_BLUE,
         ),
     }
     colocation_counts = add_colocation_layers(fmap)
