@@ -25,40 +25,45 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | Study site within 5 km | Mapped habitat near an existing study site |
 | Mapped habitat / evidence gap | No pressure, study site, or strong protection signal |
 
-**Toggable layers overview** (right side bar layer control):
+### UI features
 
-- **Ecosystem type** — kelp (orange) vs seagrass (purple); default view
-- **Canonical region** — Barents Sea / Norwegian Sea / Oslofjord / Skagerrak (Gagnon et al. 2024 scheme)
-- **Detailed region** — finer free-text region labels from source data
-- **Year sampled**
-- **Sediment C stock** — seagrass-only signal (mg C cm⁻³)
-- **Source study** — colour by citation
-- **Habitat type**
+- **Grouped layer control** (top-right) — overlays are organised into 8 collapsible categories rather than one flat list. Click a category header to fold/unfold; click a checkbox to toggle a layer.
+- **🔍 Zoom to region dropdown** (bottom-right) — jumps to one of the four canonical regions (Barents Sea, Norwegian Sea, Oslofjord, Skagerrak) and *auto-enables* the habitat, study-site, and carbon-data layers in one click.
+- **Auto-enable on zoom** — the same auto-enable also fires once when you manually zoom past zoom level 7, so the relevant layers come on as you drill in.
+- **Dynamic legend + source-links panel** (bottom-left) — updates as you toggle layers; "(Source)" links open the underlying dataset / publication.
 
-**Specific toggleable layers:**
+### Toggleable layers (grouped)
 
-| Layer | Source |
-|---|---|
-| Eelgrass polygons (Naturbase HB19) | Norwegian Environment Agency via ArcGIS REST |
-| Kelp polygons (Naturbase HB19) | Norwegian Environment Agency via ArcGIS REST |
-| Marine protected areas | Miljødirektoratet / Naturbase |
-| Aquaculture register sites | Fiskeridirektoratet (Barentswatch API) |
-| EMODnet dredging records | EMODnet Human Activities |
-| EMODnet offshore platforms | EMODnet Human Activities |
-| MASSIMAL remote-sensing field sites | MASSIMAL GitHub catalogue |
-| Bottom trawl / otter trawl / seine effort | ICES fishing effort grid |
-| Offshore drilling installations | Norwegian Offshore Directorate |
-| Port vessel traffic | EMODnet / Barentswatch |
-| Sedimentation rates | EMODnet Geology |
-| Coastal resilience/vulnerability index | EMODnet Geology|
-| Seabed erosion areas | EMODnet Geology|
-| Fish habitat suitability (climate projection) | EMODnet Biology|
-| Fishing effort | Fiskeridirektoratet ERS 2019–2023|
-| Carbon stocks by region | Canonical regions per Gagnon et al 2024 |
-| NGU: Sediment OC stocks – North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
-| NGU: Sediment OC stocks – Norwegian shelf | Norges geologiske undersøkelse (NGU) |
-| NGU: OC accumulation rates – North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
-| NGU: OC accumulation rates – Norwegian shelf | Norges geologiske undersøkelse (NGU) |
+| Group | Layer | Source |
+|---|---|---|
+| **Study Sites** | Study sites (kelp + seagrass) | Gagnon et al. 2024 + Gundersen et al. 2021 |
+| **Habitats** | Naturbase HB19: mapped eelgrass areas (WMS) | Miljødirektoratet (live WMS) |
+| **Habitats** | Naturbase HB19: mapped kelp forest occurrences (WMS) | Miljødirektoratet (live WMS) |
+| **Research Networks** | MASSIMAL remote-sensing field sites | MASSIMAL GitHub catalogue |
+| **Marine Protection** | Protected areas: marine relevant | Miljødirektoratet / Naturbase |
+| **Marine Protection** | Protected areas: MPA subset | Miljødirektoratet / Naturbase |
+| **Carbon Data** | Sedimentation rates: Norway | EMODnet Geology |
+| **Carbon Data** | Carbon stocks in seagrass by region | Canonical regions per Gagnon et al. 2024 |
+| **NGU Carbon (WMS)** | NGU: Sediment OC stocks — North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
+| **NGU Carbon (WMS)** | NGU: Sediment OC stocks — Norwegian shelf | Norges geologiske undersøkelse (NGU) |
+| **NGU Carbon (WMS)** | NGU: OC accumulation rates — North Sea / Skagerrak | Norges geologiske undersøkelse (NGU) |
+| **NGU Carbon (WMS)** | NGU: OC accumulation rates — Norwegian shelf | Norges geologiske undersøkelse (NGU) |
+| **Co-location Analysis** | Five spatial-overlap classes (see table above) | Custom analysis, EPSG:32633 |
+| **Human Pressures** | Aquaculture register: marine/saltwater sites | Fiskeridirektoratet (Barentswatch API) |
+| **Human Pressures** | EMODnet dredging: Norway | EMODnet Human Activities |
+| **Human Pressures** | EMODnet offshore platforms: Norway | EMODnet Human Activities |
+| **Human Pressures** | Bottom trawl / otter trawl / seine effort (heatmaps) | EMODnet — subsampled to 5K each |
+| **Human Pressures** | Offshore drilling: Norway | Norwegian Offshore Directorate |
+| **Human Pressures** | Port vessel traffic: Norway | EMODnet / Barentswatch |
+| **Human Pressures** | Norwegian fishing effort: ERS 2019–2023 (heatmap) | Fiskeridirektoratet ERS — subsampled to 10K |
+| **Human Pressures** | Ocean darkening (Kd_490, latest 4 km NRT) | [Copernicus Marine](https://data.marine.copernicus.eu/product/OCEANCOLOUR_GLO_BGC_L3_NRT_009_101/description) WMTS |
+| **Environmental Drivers** | Sea surface temperature (NASA MUR, daily) | NASA GIBS — JPL MUR L4 SST |
+| **Environmental Drivers** | Sea surface salinity (NASA SMAP, 8-day) | NASA GIBS — JPL SMAP L3 CAP SSS |
+| **Ecosystem Health & Condition** | Coastal resilience/vulnerability index | EMODnet Geology |
+| **Ecosystem Health & Condition** | Seabed erosion areas | EMODnet Geology |
+| **Ecosystem Health & Condition** | Fish habitat suitability (heatmap) | EMODnet Biology |
+
+By default the auto-enable target groups are **Study Sites**, **Habitats**, and **Carbon Data**. The NGU carbon WMS layers, pressures, drivers, and ecosystem-health layers stay off until you opt in.
 
 ---
 
@@ -87,12 +92,13 @@ norway-blue-carbon-map/
 │       ├── gundersen2021/              ← Extracted Gundersen 2021 tables (committed)
 │       └── nature_index/              ← NINA Nature Index averages (committed)
 ├── maps/
-│   └── norway.html                 ← OUTPUT — generated locally (not in git; see below)
+│   └── norway.html                 ← local build output (not tracked in git)
 ├── figures/
 │   ├── colocation_topline_map.png
 │   └── colocation_topline_map.svg
-├── docs/
-│   └── index.html                  ← GitHub Pages landing page
+├── docs/                           ← served by GitHub Pages
+│   ├── index.html                  ← landing page (links to ./norway.html)
+│   └── norway.html                 ← published map — auto-mirrored from maps/ at build time
 ├── requirements.txt
 └── README.md
 ```
@@ -197,11 +203,13 @@ python scripts/fetch_wdpa.py
 
 ## Sharing the map
 
-`maps/norway.html` is a fully self-contained file (all tiles and data are embedded). You can share it by:
+`maps/norway.html` and `docs/norway.html` are identical, fully self-contained files (all data embedded — only the WMS / WMTS tile layers fetch from external servers, which works in any browser online). You can share the map via:
 
-1. **Email / file transfer** — send the `.html` file directly; recipients open it in any browser.
-2. **GitHub Releases** — upload `norway.html` as a release asset for version-controlled sharing.
-3. **GitHub Pages** — copy `norway.html` to `docs/norway.html`, commit, and enable Pages in repo settings. The `docs/index.html` in this repo provides a landing page that links to it.
+1. **The live GitHub Pages site** — [https://miaconti-bit.github.io/Norway-blue-carbon-interactive-map/](https://miaconti-bit.github.io/Norway-blue-carbon-interactive-map/). `build_norway_map.py` automatically mirrors the build output into `docs/norway.html`; commit + push and the new map is live within ~1 minute.
+2. **Direct file transfer** — send `maps/norway.html` (~94 MB) by email or cloud share; recipients open it in any browser, no server needed.
+3. **GitHub Releases** — attach `norway.html` to a tagged release for version-pinned sharing.
+
+> **Heads up:** the rendered map is ~94 MB. That's just under GitHub's 100 MB hard file limit, so `git push` will warn but succeed. If file size creeps past 100 MB in future builds, the simplest knobs are in `add_fishing_heatmap_layer(..., max_pts=...)` and the geometry-simplification tolerance in `add_colocation_layers`.
 
 ---
 
