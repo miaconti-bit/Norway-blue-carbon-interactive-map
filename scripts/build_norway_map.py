@@ -54,6 +54,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 KELP_PATH = REPO_ROOT / "data" / "Norway_Macroalgae_Database.xlsm"
 SEAGRASS_PATH = REPO_ROOT / "data" / "Norway_Seagrass_ Master_Database (4).xlsx"
 OUT_PATH = REPO_ROOT / "maps" / "norway.html"
+# Second output: copied into docs/ so GitHub Pages serves it directly
+# (replaces the prior Netlify deployment). docs/index.html links to this file.
+DOCS_PAGES_PATH = REPO_ROOT / "docs" / "norway.html"
 STEP2_REGIONAL_PATH = REPO_ROOT / "data" / "processed" / "step2_seagrass_stocks_by_region.csv"
 STEP2_NATIONAL_PATH = REPO_ROOT / "data" / "processed" / "step2_national_sequestration.csv"
 STEP2_VALUATION_PATH = REPO_ROOT / "data" / "processed" / "step2_valuation.csv"
@@ -463,6 +466,29 @@ def add_protected_area_layer(fmap: folium.Map, path: Path, name: str) -> int:
         return 0
     data = json.loads(path.read_text(encoding="utf-8"))
     feature_count = len(data.get("features", []))
+    # Trim unused source properties (forvaltningsmyndighet, majorEcosystemType,
+    # is_mpa) so they don't bloat the embedded GeoJSON.
+    _keep = {"navn", "naturvernId", "offisieltNavn", "verneform", "iucn",
+             "kommune", "faktaark", "area_m2"}
+    for f in data.get("features", []):
+        props = f.get("properties") or {}
+        f["properties"] = {k: v for k, v in props.items() if k in _keep}
+    # Same ~50 m simplification as add_colocation_layers — saves several MB
+    # on the embedded HTML with no visible distortion at country zoom.
+    try:
+        from shapely.geometry import shape, mapping
+        for f in data.get("features", []):
+            geom = f.get("geometry")
+            if not geom:
+                continue
+            try:
+                g = shape(geom).simplify(0.008, preserve_topology=True)
+                if not g.is_empty:
+                    f["geometry"] = mapping(g)
+            except Exception:
+                pass
+    except ImportError:
+        pass
     folium.GeoJson(
         data,
         name=f"Protected areas: {name} ({feature_count:,})",
@@ -525,26 +551,54 @@ def add_colocation_layers(fmap: folium.Map) -> dict[str, int]:
     metrics = pd.read_csv(SPATIAL_METRICS_PATH)
     metrics["map_class"] = metrics.apply(colocation_class, axis=1)
     metrics_by_id = metrics.set_index("habitat_id").to_dict(orient="index")
+    # Only embed fields actually shown in the tooltip / popup. percent_protected,
+    # colocation_pressure_index, study_sites_within_5km_n are used to build the
+    # *_summary strings below and are then redundant; kept in metric_fields
+    # because the existing loop reads from `metric` (the CSV) into `props`.
     metric_fields = [
-        "habitat_area_m2",
         "percent_protected",
         "percent_mpa",
         "colocation_pressure_index",
         "study_sites_within_5km_n",
-        "akvakultur_within_5km_n",
-        "dredging_within_5km_n",
         "nearest_study_site_km",
         "nearest_akvakultur_km",
         "nearest_dredging_km",
-        "high_pressure_low_protection_flag",
-        "evidence_gap_flag",
         "canonical_region",
-        "map_class",
     ]
 
     features = []
     features.extend(read_hb19_features_with_ids(HB19_ALEGRAS_PATH, "seagrass", "eelgrass"))
     features.extend(read_hb19_features_with_ids(HB19_TARE_PATH, "macroalgae", "kelp_forest"))
+
+    # Trim source HB19 properties to only what tooltips / popups display.
+    # Each unused property would otherwise be embedded once per polygon × 11K
+    # polygons. Keep habitat_id (set in read_hb19_features_with_ids) for
+    # the metric-merge below.
+    _keep_source_props = {"habitat_id", "ecosystem", "habitat_group",
+                          "omraadenavn", "naturtype_label"}
+    for f in features:
+        props = f.get("properties") or {}
+        f["properties"] = {k: v for k, v in props.items() if k in _keep_source_props}
+
+    # Simplify geometries to ~50 m tolerance — these polygons drive ~97 MB of
+    # embedded HTML; reducing vertex density cuts file size dramatically with
+    # no visible distortion at the zoom levels users actually look at fjords.
+    # The underlying spatial-analysis CSV metrics are unchanged; this only
+    # touches the rendered shapes.
+    try:
+        from shapely.geometry import shape, mapping
+        for f in features:
+            geom = f.get("geometry")
+            if not geom:
+                continue
+            try:
+                g = shape(geom).simplify(0.008, preserve_topology=True)
+                if not g.is_empty:
+                    f["geometry"] = mapping(g)
+            except Exception:
+                pass
+    except ImportError:
+        pass
 
     by_class: dict[str, list[dict]] = {key: [] for key in COLOCATION_CLASSES}
     for feature in features:
@@ -841,13 +895,21 @@ def add_fishing_heatmap_layer(
     weight_col: str | None = "mw_fshn",
     bbox: dict | None = None,
     gradient: dict | None = None,
+    max_pts: int | None = None,
 ) -> int:
+    """Render a fishing-effort heatmap layer. When max_pts is set and the input
+    has more rows, subsample uniformly at random (seeded) — used to keep the
+    rendered HTML below GitHub's 100 MB file limit on EMODnet pressure layers
+    (per user pref: they're the least important at fine resolution).
+    """
     if not path.exists():
         print(f"  warning: fishing heatmap CSV not found: {path}")
         return 0
     df = pd.read_csv(path)
     df = df.dropna(subset=[lat_col, lon_col]).copy()
     df = clip_to_bbox(df, lat_col, lon_col, bbox)
+    if max_pts is not None and len(df) > max_pts:
+        df = df.sample(n=max_pts, random_state=42).reset_index(drop=True)
     if weight_col and weight_col in df.columns:
         w = pd.to_numeric(df[weight_col], errors="coerce").fillna(0).clip(lower=0)
         cap = w.quantile(0.95) or 1.0
@@ -1627,6 +1689,305 @@ def base_source_links() -> dict[str, list[dict[str, str]]]:
     }
 
 
+# ── Ported from Europe map: Kd_490 ocean-darkening + grouped layer control
+#     + region-zoom dropdown + htmlmin minification.
+#     See Europe/project/scripts/build_europe_map.py for the original.
+
+from urllib.parse import quote as urllib_quote
+
+CMEMS_WMTS = "https://wmts.marine.copernicus.eu/teroWmts"
+CMEMS_KD490_LAYER = (
+    "OCEANCOLOUR_GLO_BGC_L3_NRT_009_101/"
+    "cmems_obs-oc_glo_bgc-transp_nrt_l3-multi-4km_P1D_202311/KD490"
+)
+
+# Bounding boxes for the 4 canonical Norwegian blue-carbon regions
+# (Gagnon et al. 2024 scheme; centroids live in regions.REGION_CENTROIDS).
+NORWAY_REGION_BBOXES: dict[str, list] = {
+    "Barents Sea":   [[67.0, 16.0], [72.0, 35.0]],
+    "Norwegian Sea": [[60.0,  0.0], [68.0, 16.0]],
+    "Skagerrak":     [[57.5,  6.0], [59.5, 12.0]],
+    "Oslofjord":     [[58.8,  9.8], [60.3, 11.6]],
+}
+
+
+HB19_WMS_URL = "https://kart.miljodirektoratet.no/arcgis/services/naturtyper_marine_hb19/MapServer/WMSServer"
+
+
+def _count_geojson_features(path: Path) -> int:
+    """Count features in a cached GeoJSON file (used for legend captions when
+    the actual polygons are now served via WMS rather than embedded)."""
+    if not path.exists():
+        return 0
+    try:
+        with path.open(encoding="utf-8") as f:
+            return len(json.load(f).get("features", []))
+    except Exception:
+        return 0
+
+
+def add_hb19_wms_layer(fmap: folium.Map, wms_layer_id: str, name: str) -> None:
+    """Naturbase HB19 marine habitat polygons via the public ArcGIS WMS.
+
+    Trade-off vs. add_hb19_layer (embedded GeoJSON): no per-polygon click
+    popups, but file size drops ~100 MB and tiles render server-side at any
+    zoom. Per-polygon attribute lookup would have to use WMS GetFeatureInfo,
+    which is more work than worth at continental scale.
+    """
+    folium.WmsTileLayer(
+        url=HB19_WMS_URL,
+        layers=wms_layer_id,
+        styles="",
+        fmt="image/png", transparent=True, version="1.3.0",
+        name=name,
+        overlay=True, control=True, show=False,
+        attr='<a href="https://kartkatalog.geonorge.no/metadata/marine-naturtyper-hb19-wms/d45a2146-33cf-4c28-a8d9-48a57a99a781">Miljødirektoratet — Naturbase HB19 (marine naturtyper)</a>',
+        opacity=0.8,
+    ).add_to(fmap)
+
+
+GIBS_WMS = "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
+NASA_ENV_TIME = "2024-07-15"
+
+
+def add_nasa_drivers(fmap: folium.Map) -> None:
+    """NASA GIBS SST + SSS — ported from the Europe map. Time-pinned to
+    NASA_ENV_TIME for reproducibility (edit the constant to refresh)."""
+    folium.WmsTileLayer(
+        url=GIBS_WMS,
+        layers="GHRSST_L4_MUR_Sea_Surface_Temperature",
+        fmt="image/png", transparent=True, version="1.3.0",
+        name="Sea surface temperature (NASA MUR, daily)",
+        overlay=True, control=True, show=False,
+        time=NASA_ENV_TIME,
+        attr='<a href="https://podaac.jpl.nasa.gov/MEaSUREs-MUR">NASA JPL MUR SST</a> via NASA GIBS',
+    ).add_to(fmap)
+    folium.WmsTileLayer(
+        url=GIBS_WMS,
+        layers="SMAP_L3_Sea_Surface_Salinity_CAP_8Day_RunningMean",
+        fmt="image/png", transparent=True, version="1.3.0",
+        name="Sea surface salinity (NASA SMAP, 8-day)",
+        overlay=True, control=True, show=False,
+        time=NASA_ENV_TIME,
+        attr='<a href="https://podaac.jpl.nasa.gov/SMAP">NASA JPL SMAP SSS</a> via NASA GIBS',
+    ).add_to(fmap)
+
+
+def add_kd490_darkening_layer(fmap: folium.Map) -> None:
+    """Copernicus Marine Kd_490 (diffuse light attenuation, m⁻¹) — the
+    satellite metric used by Smyth et al. 2024 to quantify ocean darkening.
+    Public WMTS endpoint (no auth); we drive a Leaflet TileLayer with REST
+    placeholders. Server returns the latest available NRT scene because we
+    omit the TIME parameter.
+    """
+    tile_url = (
+        f"{CMEMS_WMTS}?service=WMTS&request=GetTile&version=1.0.0"
+        f"&layer={urllib_quote(CMEMS_KD490_LAYER)}"
+        f"&style=cmap:dense&tilematrixset=EPSG:3857"
+        f"&tilematrix={{z}}&tilerow={{y}}&tilecol={{x}}&format=image/png"
+    )
+    folium.TileLayer(
+        tiles=tile_url,
+        attr='<a href="https://marine.copernicus.eu">Copernicus Marine Service — '
+             'OCEANCOLOUR_GLO_BGC_L3_NRT_009_101 (Kd_490)</a>',
+        name="Ocean darkening (Kd_490 — Copernicus Marine, latest 4 km NRT)",
+        overlay=True, control=True, show=False, opacity=0.75,
+    ).add_to(fmap)
+
+
+def inject_grouped_layer_control(
+    fmap: folium.Map,
+    layer_groups: dict[str, list[str]],
+    auto_enable_groups: list[str],
+) -> None:
+    """Replace the default Leaflet overlay list with a custom collapsible
+    grouped UI (top-right). The default LayerControl is kept in the DOM as
+    the source of truth for layer state but hidden; our UI proxies clicks
+    to the original checkboxes. Auto-enable fires when the region-zoom
+    dropdown is used or when zoom crosses the threshold.
+    """
+    groups_json = json.dumps(layer_groups, ensure_ascii=False)
+    auto_json   = json.dumps(auto_enable_groups, ensure_ascii=False)
+
+    template_str = (
+        # The Ocean base tiles are added with control=False so the LayerControl
+        # has nothing to switch — its button does nothing. Hide the entire
+        # LayerControl; the DOM nodes stay (the grouped control proxies clicks
+        # to the original overlay checkboxes).
+        "{% macro html(this, kwargs) %}\n"
+        "<style>\n"
+        ".leaflet-control-layers-overlays{display:none !important;}\n"
+        ".leaflet-control-layers-separator{display:none !important;}\n"
+        ".leaflet-control-layers{display:none !important;}\n"
+        "#glc{position:fixed;top:10px;right:10px;z-index:7000;"
+        "background:rgba(255,255,255,.97);border:1px solid #888;border-radius:6px;"
+        "box-shadow:0 1px 4px rgba(0,0,0,.18);font-family:system-ui,sans-serif;"
+        "font-size:12.5px;max-width:280px;max-height:calc(100vh - 140px);"
+        "overflow-y:auto;padding:6px 8px;}\n"
+        "#glc h4{margin:0 0 4px;font-size:12px;color:#1a1a2e;"
+        "text-transform:uppercase;letter-spacing:.04em;}\n"
+        "#glc .grp{border-top:1px solid #eee;margin-top:4px;padding-top:3px;}\n"
+        "#glc .grp:first-of-type{border-top:none;margin-top:0;}\n"
+        "#glc .grp-hdr{font-weight:700;color:#0a58ca;cursor:pointer;"
+        "padding:3px 0;font-size:12px;user-select:none;}\n"
+        "#glc .grp-arrow{display:inline-block;width:10px;font-size:9px;color:#888;}\n"
+        "#glc .grp-body{padding-left:14px;margin-bottom:3px;}\n"
+        "#glc label{display:flex;align-items:flex-start;margin:2px 0;"
+        "font-size:11.5px;line-height:1.3;cursor:pointer;}\n"
+        "#glc label input{margin:2px 5px 0 0;flex-shrink:0;}\n"
+        "#glc label span{flex:1;}\n"
+        "</style>\n"
+        '<div id="glc"><h4>&#9776; Layers</h4></div>\n'
+        "<script>(function(){\n"
+        f"var GROUPS={groups_json};\n"
+        f"var AUTO={auto_json};\n"
+        "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}\n"
+        "function getMap(){return Object.values(window).find(function(v){"
+        "return v&&typeof v.eachLayer==='function'&&typeof v.fitBounds==='function';});}\n"
+        "function nameOf(inp){var l=inp.parentElement;var sp=l&&l.querySelector('span');"
+        "return sp?sp.textContent.replace(/^\\s+|\\s+$/g,''):'';}\n"
+        "function init(){\n"
+        "var map=getMap();\n"
+        "var ovl=document.querySelector('.leaflet-control-layers-overlays');\n"
+        "if(!map||!ovl||!ovl.querySelector('input')){setTimeout(init,200);return;}\n"
+        "var inputs=ovl.querySelectorAll('input[type=\"checkbox\"]');\n"
+        "var byName={};\n"
+        "inputs.forEach(function(inp){var n=nameOf(inp);if(n)byName[n]=inp;});\n"
+        "var root=document.getElementById('glc');\n"
+        "var html='';\n"
+        "Object.keys(GROUPS).forEach(function(grpName){\n"
+        "  var valid=(GROUPS[grpName]||[]).filter(function(l){return l&&byName[l];});\n"
+        "  if(!valid.length)return;\n"
+        "  html+='<div class=\"grp\"><div class=\"grp-hdr\" data-grp=\"'+esc(grpName)+'\">'+\n"
+        "        '<span class=\"grp-arrow\">&#9654;</span> '+esc(grpName)+'</div>'+\n"
+        "        '<div class=\"grp-body\" style=\"display:none\">';\n"
+        "  valid.forEach(function(name){\n"
+        "    html+='<label><input type=\"checkbox\" data-layer=\"'+esc(name)+'\"><span>'+esc(name)+'</span></label>';\n"
+        "  });\n"
+        "  html+='</div></div>';\n"
+        "});\n"
+        "root.insertAdjacentHTML('beforeend',html);\n"
+        "root.querySelectorAll('.grp-hdr').forEach(function(h){\n"
+        "  h.addEventListener('click',function(){\n"
+        "    var body=h.nextElementSibling;\n"
+        "    var open=body.style.display!=='none';\n"
+        "    body.style.display=open?'none':'';\n"
+        "    h.querySelector('.grp-arrow').innerHTML=open?'&#9654;':'&#9660;';\n"
+        "  });\n"
+        "});\n"
+        "root.querySelectorAll('input[data-layer]').forEach(function(inp){\n"
+        "  var n=inp.getAttribute('data-layer');var orig=byName[n];if(!orig)return;\n"
+        "  inp.checked=orig.checked;\n"
+        "  inp.addEventListener('change',function(){if(inp.checked!==orig.checked)orig.click();});\n"
+        "  orig.addEventListener('change',function(){inp.checked=orig.checked;});\n"
+        "});\n"
+        "root.querySelectorAll('.grp').forEach(function(g){\n"
+        "  if(g.querySelector('input[data-layer]:checked')){\n"
+        "    var body=g.querySelector('.grp-body');var arrow=g.querySelector('.grp-arrow');\n"
+        "    if(body){body.style.display='';}if(arrow){arrow.innerHTML='&#9660;';}\n"
+        "  }\n"
+        "});\n"
+        "['click','dblclick','mousedown','wheel','touchstart'].forEach(function(ev){\n"
+        "  root.addEventListener(ev,function(e){e.stopPropagation();});\n"
+        "});\n"
+        "function autoEnable(){\n"
+        "  AUTO.forEach(function(grpName){\n"
+        "    (GROUPS[grpName]||[]).forEach(function(layerName){\n"
+        "      var orig=byName[layerName];\n"
+        "      if(orig&&!orig.checked){orig.click();}\n"
+        "    });\n"
+        "  });\n"
+        "  AUTO.forEach(function(grpName){\n"
+        "    var hdr=root.querySelector('.grp-hdr[data-grp=\"'+grpName.replace(/\"/g,'')+'\"]');\n"
+        "    if(hdr){var body=hdr.nextElementSibling;if(body){body.style.display='';}\n"
+        "      var a=hdr.querySelector('.grp-arrow');if(a){a.innerHTML='&#9660;';}}\n"
+        "  });\n"
+        "}\n"
+        "window.__autoEnableLayers=autoEnable;\n"
+        "var autoFired=false;\n"
+        "map.on('zoomend',function(){\n"
+        "  if(autoFired)return;\n"
+        "  if(map.getZoom()>=7){autoFired=true;autoEnable();}\n"
+        "});\n"
+        "}\n"
+        "if(document.readyState==='complete')init();\n"
+        "else window.addEventListener('load',init);\n"
+        "})();</script>\n"
+        "{% endmacro %}"
+    )
+    macro = MacroElement()
+    macro._template = Template(template_str)
+    fmap.add_child(macro)
+
+
+def inject_region_zoom_control(fmap: folium.Map) -> None:
+    """Bottom-right dropdown that flies to one of the 4 canonical Norwegian
+    blue-carbon regions and auto-enables the habitat / carbon layer groups.
+    """
+    regions = list(NORWAY_REGION_BBOXES.keys())
+    options_html = "\n    ".join(f'<option value="{r}">{r}</option>' for r in regions)
+    bboxes_json = json.dumps(NORWAY_REGION_BBOXES, ensure_ascii=False)
+
+    template_str = (
+        "{% macro html(this, kwargs) %}\n"
+        "<style>\n"
+        "#rzw{position:fixed;bottom:70px;right:10px;z-index:8000;"
+        "background:rgba(255,255,255,.96);padding:6px 10px;border:1px solid #888;"
+        "border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18);"
+        "font-family:system-ui,sans-serif;font-size:13px;}\n"
+        "#rzw label{display:block;font-size:10px;font-weight:700;color:#555;"
+        "text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}\n"
+        "#rzs{border:1px solid #ccc;border-radius:4px;padding:3px 6px;"
+        "font-size:13px;cursor:pointer;min-width:200px;outline:none;}\n"
+        "</style>\n"
+        '<div id="rzw"><label>&#128269; Zoom to region</label>\n'
+        '<select id="rzs"><option value="">-- select region --</option>\n'
+        f"    {options_html}\n"
+        "</select></div>\n"
+        "<script>(function(){\n"
+        f"var BB={bboxes_json};\n"
+        "function gm(){return Object.values(window).find(function(v){"
+        "return v&&typeof v.fitBounds==='function'&&typeof v.setView==='function';});}\n"
+        "function bind(){\n"
+        "var s=document.getElementById('rzs'),m=gm();\n"
+        "if(!s||!m){setTimeout(bind,200);return;}\n"
+        "s.addEventListener('change',function(){\n"
+        "var r=s.value;if(!r||!BB[r])return;\n"
+        "m.fitBounds(BB[r],{maxZoom:9,padding:[30,30]});\n"
+        "if(typeof window.__autoEnableLayers==='function'){window.__autoEnableLayers();}\n"
+        "setTimeout(function(){s.value='';},150);});\n"
+        "var w=document.getElementById('rzw');\n"
+        "if(w)['click','dblclick','mousedown','wheel','touchstart'].forEach(function(e){"
+        "w.addEventListener(e,function(ev){ev.stopPropagation();});});\n"
+        "}\n"
+        "if(document.readyState==='complete')bind();\n"
+        "else window.addEventListener('load',bind);\n"
+        "})();</script>\n"
+        "{% endmacro %}"
+    )
+    macro = MacroElement()
+    macro._template = Template(template_str)
+    fmap.add_child(macro)
+
+
+def minify_html_file(path: Path) -> None:
+    try:
+        import htmlmin
+    except ImportError:
+        print("  note: htmlmin not installed — skipping minification (pip install htmlmin)")
+        return
+    try:
+        content = path.read_text(encoding="utf-8")
+        minified = htmlmin.minify(
+            content, remove_comments=True,
+            remove_empty_space=True, reduce_boolean_attributes=True,
+        )
+        path.write_text(minified, encoding="utf-8")
+        print(f"  minified → {path.stat().st_size // 1024:,} KB")
+    except Exception as e:
+        print(f"  minification error: {e}")
+
+
 def main() -> None:
     if not KELP_PATH.exists():
         raise SystemExit(f"Input not found: {KELP_PATH}")
@@ -1698,18 +2059,16 @@ def main() -> None:
         opacity=0.85,
     ).add_to(fmap)
 
-    hb19_alegras_count = add_hb19_layer(
-        fmap,
-        HB19_ALEGRAS_PATH,
-        "alegras",
-        "mapped eelgrass areas",
-    )
-    hb19_tare_count = add_hb19_layer(
-        fmap,
-        HB19_TARE_PATH,
-        "tare",
-        "mapped kelp forest occurrences",
-    )
+    # Switched from embedded GeoJSON to WMS — saves ~100 MB. We keep the old
+    # counts in `hb19_*_count` for the legend captions; they reflect the last
+    # `prepare_hb19_map_layers.py` cache regardless of what the WMS renders
+    # today (the WMS is the authoritative current view).
+    add_hb19_wms_layer(fmap, "naturtype_marin_hb19_alegras",
+                       "Naturbase HB19: mapped eelgrass areas (WMS)")
+    add_hb19_wms_layer(fmap, "naturtype_marin_hb19_tare",
+                       "Naturbase HB19: mapped kelp forest occurrences (WMS)")
+    hb19_alegras_count = _count_geojson_features(HB19_ALEGRAS_PATH)
+    hb19_tare_count    = _count_geojson_features(HB19_TARE_PATH)
     context_counts = {
         "protected_all": add_protected_area_layer(
             fmap, VERN_ALL_PATH, "marine relevant"
@@ -1727,17 +2086,23 @@ def main() -> None:
             fmap, EMODNET_PLATFORMS_PATH, "platforms", "EMODnet offshore platforms: Norway"
         ),
         "massimal": add_massimal_layer(fmap, MASSIMAL_MANIFEST_PATH),
+        # EMODnet fishing-pressure heatmaps capped at 5K points each to keep
+        # the rendered HTML under the GitHub 100 MB file limit. Per user
+        # preference: EMODnet pressures are least important at fine resolution.
         "bottom_trawls": add_fishing_heatmap_layer(
             fmap, BOTTOM_TRAWLS_PATH, "bottom_trawls",
             "Bottom trawl effort: Norwegian waters (heatmap)", bbox=NORWAY_BBOX,
+            max_pts=5000,
         ),
         "bottom_otter_trawls": add_fishing_heatmap_layer(
             fmap, BOTTOM_OTTER_TRAWLS_PATH, "bottom_otter_trawls",
             "Bottom otter trawl effort: Norwegian waters (heatmap)", bbox=NORWAY_BBOX,
+            max_pts=5000,
         ),
         "bottom_seines": add_fishing_heatmap_layer(
             fmap, BOTTOM_SEINES_PATH, "bottom_seines",
             "Bottom seine effort: Norwegian waters (heatmap)", bbox=NORWAY_BBOX,
+            max_pts=5000,
         ),
         "offshore_drilling": add_point_csv_layer(
             fmap, OFFSHORE_DRILLING_PATH, "offshore_drilling",
@@ -1752,6 +2117,7 @@ def main() -> None:
             fmap, ERS_FISHING_PATH, "ers_fishing",
             "Norwegian fishing effort: ERS 2019–2023 (kW·h, 0.05° grid)",
             weight_col="effort_kwh", bbox=NORWAY_BBOX, gradient=_GRADIENT_BLUE,
+            max_pts=10000,
         ),
     }
     colocation_counts = add_colocation_layers(fmap)
@@ -1786,8 +2152,17 @@ def main() -> None:
         sea_n_min=sea_n_min, sea_n_max=sea_n_max, show=True,
     )
 
+    # Ocean darkening (Copernicus Marine Kd_490 NRT) — ported from Europe map
+    add_kd490_darkening_layer(fmap)
+    # NASA GIBS SST + sea surface salinity — also ported from Europe
+    add_nasa_drivers(fmap)
+
     fmap.fit_bounds([[all_lats.min(), all_lons.min()], [all_lats.max(), all_lons.max()]])
-    folium.LayerControl(collapsed=False, position="topright").add_to(fmap)
+    # Default LayerControl placed bottom-right (collapsed) for base-map
+    # switching only. The region-zoom dropdown sits just above it.
+    # inject_grouped_layer_control hides this control's overlay rows and
+    # renders the custom grouped UI in the top-right.
+    folium.LayerControl(collapsed=True, position="bottomright").add_to(fmap)
 
     source_groups = base_source_links()
     layer_sources: dict[str, list[dict[str, str]]] = {}
@@ -1816,13 +2191,21 @@ def main() -> None:
     )
 
     add_layer_metadata(
-        f"Naturbase HB19: mapped eelgrass areas ({hb19_alegras_count:,})",
-        hb19_legend_html(hb19_alegras_count, 0),
+        "Naturbase HB19: mapped eelgrass areas (WMS)",
+        hb19_legend_html(hb19_alegras_count, 0)
+        + "<div style='font-size:10.5px;color:#777;margin-top:3px'>"
+          "Live WMS tile layer (Miljødirektoratet). Per-polygon click popups "
+          "are not available with WMS; the cached GeoJSON count "
+          f"(~{hb19_alegras_count:,} polygons) is shown for reference.</div>",
         source_groups["hb19"],
     )
     add_layer_metadata(
-        f"Naturbase HB19: mapped kelp forest occurrences ({hb19_tare_count:,})",
-        hb19_legend_html(0, hb19_tare_count),
+        "Naturbase HB19: mapped kelp forest occurrences (WMS)",
+        hb19_legend_html(0, hb19_tare_count)
+        + "<div style='font-size:10.5px;color:#777;margin-top:3px'>"
+          "Live WMS tile layer (Miljødirektoratet). Per-polygon click popups "
+          "are not available with WMS; the cached GeoJSON count "
+          f"(~{hb19_tare_count:,} polygons) is shown for reference.</div>",
         source_groups["hb19"],
     )
 
@@ -1925,8 +2308,78 @@ def main() -> None:
     )
     attach_layer_panels(fmap, legend_inner, layer_sources)
 
+    # ── Grouped layer control + region zoom (ported from Europe map) ──────────
+    # Layer-name template strings must match the FeatureGroup `name=` strings
+    # passed to Folium exactly — most names embed live counts, hence the
+    # f-strings below.
+    norway_layer_groups = {
+        "Study Sites": [
+            "Study sites",
+        ],
+        "Habitats": [
+            "Naturbase HB19: mapped eelgrass areas (WMS)",
+            "Naturbase HB19: mapped kelp forest occurrences (WMS)",
+        ],
+        "Research Networks": [
+            f"MASSIMAL remote-sensing field sites ({context_counts.get('massimal', 0):,})",
+        ],
+        "Marine Protection": [
+            f"Protected areas: marine relevant ({context_counts.get('protected_all', 0):,})",
+            f"Protected areas: MPA subset ({context_counts.get('protected_mpa', 0):,})",
+        ],
+        "Carbon Data": [
+            f"Sedimentation rates: Norway ({context_counts.get('sedimentation', 0):,})",
+            "Carbon stocks in seagrass by region" if step2_layer_added else None,
+        ],
+        "NGU Carbon (WMS)": [
+            "NGU: Sediment OC stocks – North Sea / Skagerrak",
+            "NGU: Sediment OC stocks – Norwegian shelf",
+            "NGU: OC accumulation rates – North Sea / Skagerrak",
+            "NGU: OC accumulation rates – Norwegian shelf",
+        ],
+        "Co-location Analysis": [
+            f"Co-location: {meta['label']} ({colocation_counts.get(key, 0):,})"
+            for key, meta in COLOCATION_CLASSES.items()
+            if colocation_counts.get(key, 0)
+        ],
+        "Human Pressures": [
+            f"Aquaculture register: marine/saltwater sites ({context_counts.get('akvakultur', 0):,})",
+            f"EMODnet dredging: Norway ({context_counts.get('dredging', 0):,})",
+            f"EMODnet offshore platforms: Norway ({context_counts.get('platforms', 0):,})",
+            f"Bottom trawl effort: Norwegian waters (heatmap) ({context_counts.get('bottom_trawls', 0):,})",
+            f"Bottom otter trawl effort: Norwegian waters (heatmap) ({context_counts.get('bottom_otter_trawls', 0):,})",
+            f"Bottom seine effort: Norwegian waters (heatmap) ({context_counts.get('bottom_seines', 0):,})",
+            f"Offshore drilling: Norway ({context_counts.get('offshore_drilling', 0):,})",
+            f"Port vessel traffic: Norway ({context_counts.get('port_traffic', 0):,} ports)",
+            f"Norwegian fishing effort: ERS 2019–2023 (kW·h, 0.05° grid) ({context_counts.get('ers_fishing', 0):,})",
+            "Ocean darkening (Kd_490 — Copernicus Marine, latest 4 km NRT)",
+        ],
+        "Environmental Drivers": [
+            "Sea surface temperature (NASA MUR, daily)",
+            "Sea surface salinity (NASA SMAP, 8-day)",
+        ],
+        "Ecosystem Health & Condition": [
+            f"Coastal resilience/vulnerability index ({context_counts.get('coastal_resilience', 0):,})",
+            f"Seabed erosion areas ({context_counts.get('seabed_erosion', 0):,})",
+            f"Fish habitat suitability: Norwegian waters (heatmap, {context_counts.get('fish_habitat', 0):,} cells)",
+        ],
+    }
+    norway_auto_enable = ["Study Sites", "Habitats", "Carbon Data"]
+    inject_grouped_layer_control(fmap, norway_layer_groups, norway_auto_enable)
+    inject_region_zoom_control(fmap)
+
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     fmap.save(str(OUT_PATH))
+    print(f"  saved: {OUT_PATH.stat().st_size // 1024:,} KB before minification")
+    print("  minifying HTML...")
+    minify_html_file(OUT_PATH)
+
+    # Mirror the finished map into docs/ so GitHub Pages serves it. docs/
+    # is the GH Pages source folder; docs/index.html links to ./norway.html.
+    import shutil
+    DOCS_PAGES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(str(OUT_PATH), str(DOCS_PAGES_PATH))
+    print(f"  also mirrored → {DOCS_PAGES_PATH.relative_to(REPO_ROOT)} for GitHub Pages")
     print(
         f"Wrote {OUT_PATH}\n"
         f"  Kelp sites:     {len(kelp)}\n"
