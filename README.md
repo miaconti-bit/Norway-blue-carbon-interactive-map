@@ -25,7 +25,7 @@ Built as part of the UC San Diego MAS CSP capstone project:
 | Study site within 5 km | Mapped habitat near an existing study site |
 | Mapped habitat / evidence gap | No pressure, study site, or strong protection signal |
 
-### UI features
+### User interface features
 
 - **Grouped layer control** (top-right) — overlays are organised into 8 collapsible categories rather than one flat list. Click a category header to fold/unfold; click a checkbox to toggle a layer.
 - **Zoom to region dropdown** (bottom-right) — jumps to one of the four canonical regions (Barents Sea, Norwegian Sea, Oslofjord, Skagerrak) and *auto-enables* the habitat, study-site, and carbon-data layers in one click.
