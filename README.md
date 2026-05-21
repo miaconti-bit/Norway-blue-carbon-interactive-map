@@ -28,7 +28,7 @@ Built as part of the UC San Diego MAS CSP capstone project:
 ### UI features
 
 - **Grouped layer control** (top-right) — overlays are organised into 8 collapsible categories rather than one flat list. Click a category header to fold/unfold; click a checkbox to toggle a layer.
-- **🔍 Zoom to region dropdown** (bottom-right) — jumps to one of the four canonical regions (Barents Sea, Norwegian Sea, Oslofjord, Skagerrak) and *auto-enables* the habitat, study-site, and carbon-data layers in one click.
+- **Zoom to region dropdown** (bottom-right) — jumps to one of the four canonical regions (Barents Sea, Norwegian Sea, Oslofjord, Skagerrak) and *auto-enables* the habitat, study-site, and carbon-data layers in one click.
 - **Auto-enable on zoom** — the same auto-enable also fires once when you manually zoom past zoom level 7, so the relevant layers come on as you drill in.
 - **Dynamic legend + source-links panel** (bottom-left) — updates as you toggle layers; "(Source)" links open the underlying dataset / publication.
 
