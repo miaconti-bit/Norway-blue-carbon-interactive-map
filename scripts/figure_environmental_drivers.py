@@ -39,24 +39,25 @@ FIG_DIR = ROOT / "figures"
 FIG_DIR.mkdir(exist_ok=True)
 
 REGION_COLOR = {
-    "Barents Sea":    "#3b6e8f",
-    "Norwegian Sea":  "#5fa3a3",
-    "Oslofjord":      "#c08457",
-    "Skagerrak":      "#d97a4a",
+    "Barents Sea":             "#3b6e8f",
+    "Norwegian Sea":           "#5fa3a3",
+    "Skagerrak (+ Oslofjord)": "#d97a4a",
 }
-REGION_ORDER = ["Barents Sea", "Norwegian Sea", "Oslofjord", "Skagerrak"]
+REGION_ORDER = ["Barents Sea", "Norwegian Sea", "Skagerrak (+ Oslofjord)"]
 
 
 def region_label(raw: str) -> str:
     r = str(raw).lower()
     if "barents" in r or "north" in r:
         return "Barents Sea"
+    # Oslofjord (south-east) and Skagerrak (south-west) are both southern Norway
+    # and are reported as one combined region — too few seagrass sites to split,
+    # matching the canonical 3-region cut used elsewhere. Match the southern
+    # labels before the "west" check below.
+    if "oslofjord" in r or "skagerrak" in r or "south" in r:
+        return "Skagerrak (+ Oslofjord)"
     if "norwegian" in r or "west" in r:
         return "Norwegian Sea"
-    if "oslofjord" in r or "south east" in r:
-        return "Oslofjord"
-    if "skagerrak" in r or "south west" in r:
-        return "Skagerrak"
     return "Unknown"
 
 
@@ -200,7 +201,7 @@ def render(df: pd.DataFrame) -> Path:
         for r in REGION_ORDER
     ]
     fig.legend(handles=handles, loc="upper center",
-               bbox_to_anchor=(0.54, 0.965), ncol=4, frameon=False,
+               bbox_to_anchor=(0.54, 0.965), ncol=3, frameon=False,
                fontsize=9, title="Region", title_fontsize=9)
 
     fig.suptitle("Environmental Drivers of Eelgrass Carbon Storage in Norway",

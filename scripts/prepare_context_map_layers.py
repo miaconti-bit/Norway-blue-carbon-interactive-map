@@ -5,7 +5,7 @@ Currently prepares Miljødirektoratet Verneområder polygons:
   - MPA-only subset
 
 Run:
-  /opt/anaconda3/envs/ella-capstone/bin/python scripts/prepare_context_map_layers.py
+  python scripts/prepare_context_map_layers.py
 """
 
 from __future__ import annotations

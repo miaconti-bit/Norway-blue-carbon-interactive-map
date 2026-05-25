@@ -12,7 +12,7 @@ Output:
   figures/colocation_topline_map.svg
 
 Run:
-  MPLCONFIGDIR=/tmp/mplconfig /opt/anaconda3/envs/ella-capstone/bin/python scripts/figure_colocation_topline_map.py
+  MPLCONFIGDIR=/tmp/mplconfig python scripts/figure_colocation_topline_map.py
 """
 
 from __future__ import annotations

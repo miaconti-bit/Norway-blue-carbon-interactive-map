@@ -21,7 +21,7 @@ Definition note:
   `protection_tier_definitions` in the manifest.
 
 Run from repo root:
-  MPLCONFIGDIR=/tmp/mplconfig /opt/anaconda3/envs/ella-capstone/bin/python scripts/figure_stress_diagnostics.py
+  MPLCONFIGDIR=/tmp/mplconfig python scripts/figure_stress_diagnostics.py
   (or any env with matplotlib + pandas + numpy)
 """
 

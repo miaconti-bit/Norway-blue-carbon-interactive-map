@@ -41,7 +41,7 @@ REGION_ORDER = ["Barents Sea", "Norwegian Sea", "Skagerrak"]
 REGION_SHORT = {
     "Barents Sea":   "Barents Sea",
     "Norwegian Sea": "Norwegian Sea",
-    "Skagerrak":     "Skagerrak\n(incl. Oslofjord)",
+    "Skagerrak":     "Skagerrak (+ Oslofjord)",
 }
 HABITAT_COLOR = {
     "macroalgae": "#2c6e49",
@@ -102,7 +102,7 @@ def panel_a_heatmap(ax, df: pd.DataFrame) -> None:
     row_labels = [
         f"{'  ' if r['ecosystem'] == 'seagrass' else ''}"
         f"{HABITAT_LABEL[r['ecosystem']]} · "
-        f"{REGION_SHORT[r['canonical_region']].split(chr(10))[0]}"
+        f"{REGION_SHORT[r['canonical_region']]}"
         for r in rows
     ]
 
@@ -253,7 +253,8 @@ def panel_b_pressure_decomp(ax, df: pd.DataFrame) -> None:
     regions = REGION_ORDER
     ecos = ["macroalgae", "seagrass"]
     bar_h = 0.36
-    short = {"Barents Sea": "Barents", "Norwegian Sea": "Norwegian", "Skagerrak": "Skagerrak"}
+    short = {"Barents Sea": "Barents", "Norwegian Sea": "Norwegian",
+             "Skagerrak": "Skagerrak (+ Oslofjord)"}
 
     y_positions, y_labels = [], []
     pos = 0

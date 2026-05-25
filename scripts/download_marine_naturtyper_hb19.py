@@ -13,7 +13,7 @@ Outputs:
   - data/external/naturbase_hb19/naturbase_hb19_download_manifest.json
 
 Run:
-  /opt/anaconda3/envs/ella-capstone/bin/python scripts/download_marine_naturtyper_hb19.py
+  python scripts/download_marine_naturtyper_hb19.py
 
 The raw Excel workbooks in data/ are not modified.
 """

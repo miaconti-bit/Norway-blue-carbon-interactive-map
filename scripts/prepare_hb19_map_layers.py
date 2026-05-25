@@ -5,7 +5,7 @@ unwieldy. This script preserves the full downloaded files under data/external
 and writes simplified, property-trimmed GeoJSON layers for map display.
 
 Run:
-  /opt/anaconda3/envs/ella-capstone/bin/python scripts/prepare_hb19_map_layers.py
+  python scripts/prepare_hb19_map_layers.py
 """
 
 from __future__ import annotations

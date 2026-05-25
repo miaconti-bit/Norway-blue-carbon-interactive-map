@@ -28,7 +28,7 @@ Writes to figures/carbon_stocks/:
   carbon_stock_estimates.csv
 
 Run:
-  MPLCONFIGDIR=/tmp/mplconfig /opt/anaconda3/envs/ella-capstone/bin/python scripts/figure_carbon_stocks.py
+  MPLCONFIGDIR=/tmp/mplconfig python scripts/figure_carbon_stocks.py
 """
 
 from __future__ import annotations
@@ -69,10 +69,23 @@ ECO_COLORS = {"seagrass": "#7d3c98", "macroalgae": "#0a6b54"}
 REGION_COLORS = {
     "Barents Sea": "#e07a5f",
     "Norwegian Sea": "#3d5a80",
-    "Oslofjord": "#81b29a",
     "Skagerrak": "#f2cc8f",
 }
-REGION_ORDER = ["Barents Sea", "Norwegian Sea", "Oslofjord", "Skagerrak"]
+REGION_ORDER = ["Barents Sea", "Norwegian Sea", "Skagerrak"]
+
+# Oslofjord and Skagerrak are both southern Norway and are reported as one
+# combined region across all project figures. The canonical "Skagerrak" key
+# absorbs Oslofjord (and is the join key against HB19 extent / metrics, which
+# already group the south under Skagerrak); this maps it to its display label.
+REGION_DISPLAY = {
+    "Barents Sea":   "Barents Sea",
+    "Norwegian Sea": "Norwegian Sea",
+    "Skagerrak":     "Skagerrak (+ Oslofjord)",
+}
+
+
+def region_display(region: str) -> str:
+    return REGION_DISPLAY.get(region, region)
 
 BOOTSTRAP_N = 10_000
 RNG = np.random.default_rng(seed=20260508)
@@ -83,6 +96,9 @@ def load_seagrass_points() -> pd.DataFrame:
     sg = df[(df["ecosystem"] == "seagrass")
             & (df["inventory_record_type"] == "true_point_site")
             & df["carbon_stock_g_m2"].notna()].copy()
+    # Combine Oslofjord into Skagerrak (canonical 3-region display cut, matching
+    # the HB19 extent grouping used for the area-weighted rollups).
+    sg["canonical_region"] = sg["canonical_region"].replace({"Oslofjord": "Skagerrak"})
     return sg[["site_name", "canonical_region", "carbon_stock_g_m2",
                "sample_size_n", "depth_m", "year", "source_short"]].reset_index(drop=True)
 
@@ -123,7 +139,7 @@ def fig08_field_measurements(sg: pd.DataFrame, out: Path) -> None:
                label=f"Pooled mean = {national_mean:,.0f} g C / m^2")
 
     ax.set_xticks(range(len(REGION_ORDER)))
-    ax.set_xticklabels(REGION_ORDER)
+    ax.set_xticklabels([region_display(r) for r in REGION_ORDER])
     ax.set_ylabel("Sediment carbon stock (g C / m^2)")
     ax.set_xlim(-0.5, len(REGION_ORDER) - 0.5)
     ax.set_ylim(-1500, sg["carbon_stock_g_m2"].max() * 1.1)
@@ -222,7 +238,7 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> None:
         ax.text(i, -max_y * 0.06, f"N={n_sites} sites\n{area_km2:.0f} km^2",
                 ha="center", fontsize=8, color="#444")
     ax.set_xticks(range(len(region_keys)))
-    ax.set_xticklabels(region_keys)
+    ax.set_xticklabels([region_display(r) for r in region_keys])
     ax.set_ylim(-max_y * 0.15, max_y)
     ax.set_ylabel("Regional stock (kt C)")
     total_low, total_high = np.percentile(regional_kt_c, [2.5, 97.5])
@@ -421,6 +437,9 @@ def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> None
                color=ECO_COLORS[ecosystem], edgecolor="white", linewidth=0.5,
                label=ecosystem.capitalize())
         bottom += pivot[ecosystem].values
+    ax.set_xticks(range(len(pivot.index)))
+    ax.set_xticklabels([region_display(r) for r in pivot.index],
+                       fontsize=8, rotation=12, ha="right")
     ax.set_yscale("log")
     ax.set_ylabel("Stock (kt C, log scale)")
     ax.set_title("Regional disaggregation\n(seagrass stock area-weighted; macroalgae density uniform - regional variation not validated)")
@@ -500,7 +519,7 @@ def fig12_carbon_at_risk(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> Non
             if v > 0:
                 ax.text(x, v + max(med) * 0.02, f"{v:.1f}", ha="center", fontsize=8)
     ax.set_xticks(pos)
-    ax.set_xticklabels(region_order)
+    ax.set_xticklabels([region_display(r) for r in region_order])
     ax.set_ylabel("Stressed habitat-stored C (kt C)")
     ax.set_title(
         "Habitat-stored carbon in pressure x no-strict-protection class, by region\n"
