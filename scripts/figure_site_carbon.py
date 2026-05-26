@@ -131,9 +131,16 @@ def panel_a_site_stocks(ax, df: pd.DataFrame) -> None:
         region = df.loc[df["Site Name"] == site, "region"].iloc[0]
         region_spans.setdefault(region, []).append(xi)
 
+    # Short band labels so the single-site Barents/Norwegian regions don't collide.
+    region_band_label = {
+        "Barents Sea":             "Barents",
+        "Norwegian Sea":           "Norwegian",
+        "Skagerrak (+ Oslofjord)": "Skagerrak (+ Oslofjord)",
+    }
     for region, positions in region_spans.items():
         mid = np.mean(positions)
-        ax.text(mid, -1250, region, ha="center", va="top", fontsize=8,
+        ax.text(mid, -1250, region_band_label.get(region, region),
+                ha="center", va="top", fontsize=8,
                 color=REGION_COLOR[region], fontweight="bold")
         ax.plot([min(positions) - 0.4, max(positions) + 0.4],
                 [-950, -950], color=REGION_COLOR[region], linewidth=2)

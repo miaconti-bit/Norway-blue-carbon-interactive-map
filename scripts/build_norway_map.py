@@ -1295,29 +1295,20 @@ def hb19_legend_html(alegras_count: int, tare_count: int) -> str:
     if alegras_count:
         rows.append(
             f"<div style='display:flex;align-items:center;margin:2px 0'>"
-            f"<span style='display:inline-block;width:14px;height:9px;background:#31a354;"
-            f"opacity:.45;margin-right:6px;border:1px solid #006d2c'></span>"
-            f"<span>Eelgrass areas: {alegras_count:,}</span></div>"
+            f"<span style='display:inline-block;width:14px;height:9px;background:#31d35c;"
+            f"margin-right:6px;border:1px solid #006d2c'></span>"
+            f"<span>Eelgrass extent: {alegras_count:,} polygons</span></div>"
         )
     if tare_count:
         rows.append(
             f"<div style='display:flex;align-items:center;margin:2px 0'>"
-            f"<span style='display:inline-block;width:14px;height:9px;background:#bf812d;"
-            f"opacity:.45;margin-right:6px;border:1px solid #8c510a'></span>"
-            f"<span>Kelp forest occurrences: {tare_count:,}</span></div>"
+            f"<span style='display:inline-block;width:14px;height:9px;background:{HB19_KELP_SWATCH};"
+            f"margin-right:6px;border:1px solid #0066aa'></span>"
+            f"<span>Kelp forest extent: {tare_count:,} polygons</span></div>"
         )
-    eelgrass_note = (
-        "<div style='font-size:11px;color:#777;line-height:1.35;margin-top:4px'>"
-        "Eelgrass polygons are classified by pressure, protection, and study coverage "
-        "(seagrass only).</div>"
-    ) if alegras_count else ""
     return (
         "<div style='font-weight:600;margin:8px 0 4px'>Naturbase HB19 polygons</div>"
         + "".join(rows)
-        + "<div style='font-size:11px;color:#777;line-height:1.35'>"
-        "Fill shade follows Naturbase value class A/B/C."
-        "</div>"
-        + eelgrass_note
     )
 
 
@@ -1609,7 +1600,14 @@ def base_source_links() -> dict[str, list[dict[str, str]]]:
         source_link(
             "Naturbase / Marine naturtyper HB19",
             "https://register.geonorge.no/mottaksordning-innsamling-geodata/marine-naturtyper-hb19",
-            "Mapped eelgrass and kelp forest habitat polygons.",
+            "Miljødirektoratet national marine-habitat survey (eelgrass, kelp).",
+        ),
+    ]
+    emodnet_habitats = [
+        source_link(
+            "EMODnet Seabed Habitats — seagrass & macroalgae (EOV 2025)",
+            "https://emodnet.ec.europa.eu/en/seabed-habitats",
+            "Pan-European seabed-habitat compilation (C-BLUES D1.2 + national monitoring).",
         ),
     ]
     protected = [
@@ -1679,6 +1677,7 @@ def base_source_links() -> dict[str, list[dict[str, str]]]:
         "study": study,
         "all_study": all_study,
         "hb19": hb19,
+        "emodnet_habitats": emodnet_habitats,
         "protected": protected,
         "akvakultur": akvakultur,
         "emodnet": emodnet,
@@ -1711,12 +1710,29 @@ NORWAY_REGION_BBOXES: dict[str, list] = {
 }
 
 
-HB19_WMS_URL = "https://kart.miljodirektoratet.no/arcgis/services/naturtyper_marine_hb19/MapServer/WMSServer"
+# Naturbase HB19 marine habitats: the ArcGIS *REST* MapServer renders fine, but
+# the matching WMS facade (.../MapServer/WMSServer) is broken upstream — it lists
+# the layers in GetCapabilities yet returns blank tiles for every CRS/zoom (a
+# `transparent=false` GetMap of the combined layer over all of Norway comes back
+# 100% white). So we drive the working REST `export` endpoint via esri-leaflet's
+# dynamicMapLayer instead of folium.WmsTileLayer. Still server-side, so no
+# embedded GeoJSON and the HTML stays small.
+HB19_REST_URL = "https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_marine_hb19/MapServer"
+HB19_ESRI_JS  = "https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"
+HB19_ATTR     = '<a href="https://kartkatalog.geonorge.no/metadata/marine-naturtyper-hb19-wms/d45a2146-33cf-4c28-a8d9-48a57a99a781">Miljødirektoratet — Naturbase HB19 (marine naturtyper)</a>'
+# Sublayer ids in the MapServer (see /MapServer?f=json): 1 = tare (kelp),
+# 7 = ålegras (eelgrass).
+HB19_LAYER_IDS = {"alegras": 7, "tare": 1}
+# CSS filter that turns the service's brown kelp symbology into a neon blue
+# (distinct from the green eelgrass, the muted co-location blue, and the pale
+# ocean basemap). Applied client-side per inject_hb19_esri_layers.
+HB19_KELP_FILTER = "hue-rotate(180deg) saturate(5.5) brightness(1.25)"
+HB19_KELP_SWATCH = "#00a8ff"  # legend swatch approximating the recoloured kelp
 
 
 def _count_geojson_features(path: Path) -> int:
-    """Count features in a cached GeoJSON file (used for legend captions when
-    the actual polygons are now served via WMS rather than embedded)."""
+    """Count features in a cached GeoJSON file (used for legend captions; the
+    actual polygons are now rendered server-side rather than embedded)."""
     if not path.exists():
         return 0
     try:
@@ -1726,24 +1742,155 @@ def _count_geojson_features(path: Path) -> int:
         return 0
 
 
-def add_hb19_wms_layer(fmap: folium.Map, wms_layer_id: str, name: str) -> None:
-    """Naturbase HB19 marine habitat polygons via the public ArcGIS WMS.
+def add_hb19_dynamic_layer(fmap: folium.Map, layer_id: int, name: str,
+                           opacity: float = 0.8,
+                           css_filter: str | None = None) -> tuple[str, int, float, str | None]:
+    """Register a Naturbase HB19 habitat overlay.
 
-    Trade-off vs. add_hb19_layer (embedded GeoJSON): no per-polygon click
-    popups, but file size drops ~100 MB and tiles render server-side at any
-    zoom. Per-polygon attribute lookup would have to use WMS GetFeatureInfo,
-    which is more work than worth at continental scale.
+    The polygons live inside a named, control=True FeatureGroup so the custom
+    grouped layer control and legend pick them up by name exactly like any other
+    overlay. The actual raster (an esri-leaflet dynamicMapLayer against the ArcGIS
+    REST MapServer) is wired up later by inject_hb19_esri_layers — it only fires
+    `export` requests once the group is toggled on. Returns the spec
+    (FeatureGroup var, sublayer id, opacity, css_filter) for that injector.
+
+    css_filter, if given, is a CSS filter string applied to the rendered image on
+    every update (the service's renderer can't be overridden — supportsDynamicLayers
+    is false — so recolouring is client-side). Used to turn the server's brown kelp
+    into a distinct neon blue; eelgrass keeps its native green (css_filter=None).
+
+    Trade-off vs. embedded GeoJSON: no per-polygon click popups, but the HTML
+    stays ~tens of MB smaller (under the GitHub 100 MB limit).
     """
+    fg = folium.FeatureGroup(name=name, show=False, control=True)
+    fg.add_to(fmap)
+    return fg.get_name(), layer_id, opacity, css_filter
+
+
+def inject_hb19_esri_layers(fmap: folium.Map,
+                            specs: list[tuple[str, int, float, str | None]]) -> None:
+    """Load esri-leaflet (dynamically, so it runs *after* Leaflet core is ready —
+    a static <head> link would race ahead of folium's own leaflet.js) and attach
+    one dynamicMapLayer per spec to its FeatureGroup var. A per-spec css_filter is
+    re-applied on the layer's `load` event (esri recreates the <img> on every
+    pan/zoom, so a one-time style would not persist). Falls back gracefully
+    (console warning) if esri-leaflet can't be fetched."""
+    defs = json.dumps([[fg_var, lid, op, filt] for fg_var, lid, op, filt in specs])
+    template = (
+        "{% macro script(this, kwargs) %}\n"
+        "(function(){\n"
+        f"  var DEFS={defs}, URL={json.dumps(HB19_REST_URL)}, ATTR={json.dumps(HB19_ATTR)};\n"
+        "  function build(){\n"
+        "    DEFS.forEach(function(d){\n"
+        "      var fg=window[d[0]]; if(!fg||typeof fg.addLayer!=='function')return;\n"
+        "      var lyr=L.esri.dynamicMapLayer({url:URL, layers:[d[1]], opacity:d[2],\n"
+        "        format:'png32', transparent:true, attribution:ATTR});\n"
+        "      if(d[3]){lyr.on('load',function(){\n"
+        "        var im=lyr._currentImage&&lyr._currentImage.getElement&&lyr._currentImage.getElement();\n"
+        "        if(im){im.style.filter=d[3];}\n"
+        "      });}\n"
+        "      fg.addLayer(lyr);\n"
+        "    });\n"
+        "  }\n"
+        "  if(window.L && L.esri && L.esri.dynamicMapLayer){build();return;}\n"
+        "  var s=document.createElement('script');\n"
+        f"  s.src={json.dumps(HB19_ESRI_JS)};\n"
+        "  s.onload=build;\n"
+        "  s.onerror=function(){console.warn('esri-leaflet failed to load; Naturbase HB19 layers unavailable');};\n"
+        "  document.head.appendChild(s);\n"
+        "})();\n"
+        "{% endmacro %}"
+    )
+    el = MacroElement()
+    el._template = Template(template)
+    fmap.add_child(el)
+
+
+# EMODnet Seabed Habitats — pan-European, broad-scale seagrass/macroalgae
+# distribution (the same WMS the Europe map uses; it also covers Norwegian
+# waters). Server-rendered WMS, so it adds ~no bytes to the HTML. This is a
+# *context* overview only: much of it is modelled/predicted and lower-confidence
+# than Naturbase HB19, so it is NOT used for the co-location or gap analysis.
+EMODNET_SEABED_WMS = "https://ows.emodnet-seabedhabitats.eu/geoserver/emodnet_open/wms"
+EMODNET_HAB_ATTR   = '<a href="https://emodnet.ec.europa.eu/en/seabed-habitats">EMODnet Seabed Habitats</a>'
+
+
+# Clip EMODnet (pan-European) to Norwegian waters so it doesn't render across all
+# of Europe. Leaflet's GridLayer `bounds` option (a [[s,w],[n,e]] LatLngBounds)
+# suppresses tile requests outside the box. west=3 excludes Iceland/UK even at low
+# zoom (coarse tiles); south=57.9 sits in the gap between Denmark's northern tip
+# (Skagen ~57.75°N) and Norway's southern tip (Lindesnes ~57.98°N), so it drops
+# Denmark while keeping the Norwegian coast. Sweden shares the Skagerrak coast with
+# Norway, so a rectangle can't exclude it — but the rest of Europe is gone.
+EMODNET_NORWAY_BOUNDS = [[57.9, 3.0], [72.0, 32.0]]
+
+
+def add_emodnet_habitat_layer(fmap: folium.Map, group_layer: str,
+                              poly_layer: str, name: str) -> folium.FeatureGroup:
+    """EMODnet Seabed Habitats WMS, bundled like the Europe map: a generalised
+    *group* layer that renders at every zoom (continental overview) plus a
+    *detailed* poly layer that kicks in at zoom>=8. Clipped to Norwegian waters
+    via `bounds`. Both are recoloured by inject_wms_pane_colors (seagrass→purple,
+    macroalgae→orange) so they read distinctly from the HB19 polygons."""
+    fg = folium.FeatureGroup(name=name, show=False)
     folium.WmsTileLayer(
-        url=HB19_WMS_URL,
-        layers=wms_layer_id,
-        styles="",
+        url=EMODNET_SEABED_WMS, layers=group_layer,
         fmt="image/png", transparent=True, version="1.3.0",
-        name=name,
-        overlay=True, control=True, show=False,
-        attr='<a href="https://kartkatalog.geonorge.no/metadata/marine-naturtyper-hb19-wms/d45a2146-33cf-4c28-a8d9-48a57a99a781">Miljødirektoratet — Naturbase HB19 (marine naturtyper)</a>',
-        opacity=0.8,
-    ).add_to(fmap)
+        overlay=False, control=False, show=True, detect_retina=True,
+        attr=EMODNET_HAB_ATTR, bounds=EMODNET_NORWAY_BOUNDS,
+    ).add_to(fg)
+    folium.WmsTileLayer(
+        url=EMODNET_SEABED_WMS, layers=poly_layer,
+        fmt="image/png", transparent=True, version="1.3.0",
+        overlay=False, control=False, show=True, detect_retina=True,
+        min_zoom=8, attr=EMODNET_HAB_ATTR, bounds=EMODNET_NORWAY_BOUNDS,
+    ).add_to(fg)
+    fg.add_to(fmap)
+    return fg
+
+
+def inject_wms_pane_colors(fmap: folium.Map) -> None:
+    """Recolour the EMODnet seagrass/macroalgae WMS tiles (EMODnet renders both
+    near-black). Ported from the Europe map: on layeradd, find each WMS layer by
+    its wmsParams.layers and apply a CSS filter chain to its tile container.
+    Only matches WMS layers, so the Naturbase HB19 esri layers are untouched."""
+    template_str = (
+        "{% macro html(this, kwargs) %}\n"
+        "<script>\n"
+        "(function(){\n"
+        "  function colorLayer(layer){\n"
+        "    if(layer && layer.eachLayer && !layer.wmsParams){\n"
+        "      try{layer.eachLayer(colorLayer);}catch(e){}\n"
+        "      return;\n"
+        "    }\n"
+        "    var ln=(layer.wmsParams&&layer.wmsParams.layers)||'';\n"
+        "    var c=layer.getContainer?layer.getContainer():layer._container;\n"
+        "    if(!c||!ln)return;\n"
+        "    if(ln.indexOf('seagrass')!==-1){\n"
+        "      c.style.filter='invert(1) sepia(1) saturate(15) hue-rotate(227deg) brightness(0.65)';\n"
+        "      c.style.opacity='0.85';\n"
+        "    }else if(ln.indexOf('macroalg')!==-1){\n"
+        "      c.style.filter='invert(1) sepia(1) saturate(8) hue-rotate(349deg) brightness(0.9)';\n"
+        "      c.style.opacity='0.85';\n"
+        "    }\n"
+        "  }\n"
+        "  function init(){\n"
+        "    var map=Object.values(window).find(function(v){\n"
+        "      return v&&typeof v.eachLayer==='function'&&typeof v.fitBounds==='function';\n"
+        "    });\n"
+        "    if(!map){setTimeout(init,200);return;}\n"
+        "    map.eachLayer(colorLayer);\n"
+        "    map.on('layeradd',function(e){setTimeout(function(){colorLayer(e.layer);},80);});\n"
+        "  }\n"
+        "  if(document.readyState==='complete')init();\n"
+        "  else window.addEventListener('load',init);\n"
+        "})();\n"
+        "</script>\n"
+        "{% endmacro %}"
+    )
+    macro = MacroElement()
+    macro._template = Template(template_str)
+    fmap.add_child(macro)
 
 
 GIBS_WMS = "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
@@ -1799,15 +1946,20 @@ def inject_grouped_layer_control(
     fmap: folium.Map,
     layer_groups: dict[str, list[str]],
     auto_enable_groups: list[str],
+    auto_exclude_layers: list[str] | None = None,
 ) -> None:
     """Replace the default Leaflet overlay list with a custom collapsible
     grouped UI (top-right). The default LayerControl is kept in the DOM as
     the source of truth for layer state but hidden; our UI proxies clicks
     to the original checkboxes. Auto-enable fires when the region-zoom
     dropdown is used or when zoom crosses the threshold.
+
+    auto_exclude_layers: layer names that must never auto-enable even when their
+    group is in auto_enable_groups (e.g. a visually busy layer kept manual-only).
     """
     groups_json = json.dumps(layer_groups, ensure_ascii=False)
     auto_json   = json.dumps(auto_enable_groups, ensure_ascii=False)
+    exclude_json = json.dumps(auto_exclude_layers or [], ensure_ascii=False)
 
     template_str = (
         # The Ocean base tiles are added with control=False so the LayerControl
@@ -1841,6 +1993,7 @@ def inject_grouped_layer_control(
         "<script>(function(){\n"
         f"var GROUPS={groups_json};\n"
         f"var AUTO={auto_json};\n"
+        f"var AUTO_EXCLUDE={exclude_json};\n"
         "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}\n"
         "function getMap(){return Object.values(window).find(function(v){"
         "return v&&typeof v.eachLayer==='function'&&typeof v.fitBounds==='function';});}\n"
@@ -1893,6 +2046,7 @@ def inject_grouped_layer_control(
         "function autoEnable(){\n"
         "  AUTO.forEach(function(grpName){\n"
         "    (GROUPS[grpName]||[]).forEach(function(layerName){\n"
+        "      if(AUTO_EXCLUDE.indexOf(layerName)!==-1)return;\n"
         "      var orig=byName[layerName];\n"
         "      if(orig&&!orig.checked){orig.click();}\n"
         "    });\n"
@@ -2042,6 +2196,10 @@ def main() -> None:
         location=[all_lats.mean(), all_lons.mean()],
         zoom_start=5, tiles=None, control_scale=True,
     )
+    # max_native_zoom=10: the Esri Ocean basemap has global tiles only to ~z10;
+    # beyond that it returns a "Map data not yet available" placeholder tile. Capping
+    # native zoom makes Leaflet upscale the z10 tiles instead (blurry but no
+    # placeholder text) while still allowing deep zoom for the habitat layers.
     folium.TileLayer(
         tiles="https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
         attr=(
@@ -2050,6 +2208,7 @@ def main() -> None:
         ),
         name="Ocean",
         control=False,
+        max_native_zoom=10, max_zoom=18,
     ).add_to(fmap)
     folium.TileLayer(
         tiles="https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}",
@@ -2057,18 +2216,35 @@ def main() -> None:
         name="Ocean labels",
         control=False,
         opacity=0.85,
+        max_native_zoom=10, max_zoom=18,
     ).add_to(fmap)
 
-    # Switched from embedded GeoJSON to WMS — saves ~100 MB. We keep the old
-    # counts in `hb19_*_count` for the legend captions; they reflect the last
-    # `prepare_hb19_map_layers.py` cache regardless of what the WMS renders
-    # today (the WMS is the authoritative current view).
-    add_hb19_wms_layer(fmap, "naturtype_marin_hb19_alegras",
-                       "Naturbase HB19: mapped eelgrass areas (WMS)")
-    add_hb19_wms_layer(fmap, "naturtype_marin_hb19_tare",
-                       "Naturbase HB19: mapped kelp forest occurrences (WMS)")
+    # HB19 habitats render server-side via the ArcGIS REST MapServer (no embedded
+    # GeoJSON — keeps the HTML small). hb19_*_count come from the cached
+    # `prepare_hb19_map_layers.py` GeoJSON and are shown in the legend captions as
+    # an approximate polygon count for the live layer.
+    # Kelp renders brown server-side and got lost against the ocean/co-location
+    # layers; recolour it to a neon blue. Eelgrass keeps its native neon green.
+    hb19_specs = [
+        add_hb19_dynamic_layer(fmap, HB19_LAYER_IDS["alegras"],
+                               "Naturbase HB19: eelgrass extent"),
+        add_hb19_dynamic_layer(fmap, HB19_LAYER_IDS["tare"],
+                               "Naturbase HB19: kelp forest extent",
+                               css_filter=HB19_KELP_FILTER),
+    ]
+    inject_hb19_esri_layers(fmap, hb19_specs)
     hb19_alegras_count = _count_geojson_features(HB19_ALEGRAS_PATH)
     hb19_tare_count    = _count_geojson_features(HB19_TARE_PATH)
+
+    # EMODnet broad-scale habitat overview (pan-European WMS, clipped to Norway).
+    # Context only — recoloured purple/orange to read distinctly from HB19.
+    add_emodnet_habitat_layer(
+        fmap, "emodnet_open:eov_seagrass_group", "emodnet_open:seagrass_eov_poly_2025",
+        "EMODnet seagrass extent (broad-scale)")
+    add_emodnet_habitat_layer(
+        fmap, "emodnet_open:eov_macroalgal_group", "emodnet_open:macroalgae_eov_poly_2025",
+        "EMODnet macroalgae / kelp extent (broad-scale)")
+    inject_wms_pane_colors(fmap)
     context_counts = {
         "protected_all": add_protected_area_layer(
             fmap, VERN_ALL_PATH, "marine relevant"
@@ -2190,23 +2366,62 @@ def main() -> None:
         active=True,
     )
 
+    # Naturbase HB19 — authoritative national field survey; the dataset the
+    # co-location and habitat-gap analysis is built on. High-res but only covers
+    # surveyed stretches of coast, so it is patchy by design (the gaps are a
+    # finding, see the Co-location "Mapped habitat / evidence gap" layer).
+    _hb19_intro = (
+        "<div style='font-size:11px;color:#155724;background:#e8f5e9;border-left:3px solid #31a354;"
+        "padding:4px 6px;margin-bottom:5px;line-height:1.35'>"
+        "<strong>Naturbase HB19 — Norwegian national field survey.</strong> "
+        "High-resolution, management-grade habitat delineations (DN-håndbok 19). "
+        "This is the authoritative dataset used for the co-location and habitat-gap "
+        "analysis. It only covers surveyed coastline, so blank stretches are genuine "
+        "mapping gaps, not absence of habitat.</div>"
+    )
+    _hb19_render_note = (
+        "<div style='font-size:10.5px;color:#777;margin-top:3px'>"
+        "Extent layer, rendered server-side from the Miljødirektoratet ArcGIS map "
+        "service; visible when zoomed into the coast. No click pop-ups.</div>"
+    )
     add_layer_metadata(
-        "Naturbase HB19: mapped eelgrass areas (WMS)",
-        hb19_legend_html(hb19_alegras_count, 0)
-        + "<div style='font-size:10.5px;color:#777;margin-top:3px'>"
-          "Live WMS tile layer (Miljødirektoratet). Per-polygon click popups "
-          "are not available with WMS; the cached GeoJSON count "
-          f"(~{hb19_alegras_count:,} polygons) is shown for reference.</div>",
+        "Naturbase HB19: eelgrass extent",
+        _hb19_intro + hb19_legend_html(hb19_alegras_count, 0) + _hb19_render_note,
         source_groups["hb19"],
     )
     add_layer_metadata(
-        "Naturbase HB19: mapped kelp forest occurrences (WMS)",
-        hb19_legend_html(0, hb19_tare_count)
-        + "<div style='font-size:10.5px;color:#777;margin-top:3px'>"
-          "Live WMS tile layer (Miljødirektoratet). Per-polygon click popups "
-          "are not available with WMS; the cached GeoJSON count "
-          f"(~{hb19_tare_count:,} polygons) is shown for reference.</div>",
+        "Naturbase HB19: kelp forest extent",
+        _hb19_intro + hb19_legend_html(0, hb19_tare_count) + _hb19_render_note,
         source_groups["hb19"],
+    )
+
+    # EMODnet — pan-European broad-scale overview; context only, recoloured
+    # purple (seagrass) / orange (macroalgae) to read distinctly from HB19.
+    def _emodnet_hab_legend(swatch_color: str, label: str) -> str:
+        return (
+            "<div style='font-size:11px;color:#5a3a00;background:#fff3e0;border-left:3px solid #e07000;"
+            "padding:4px 6px;margin-bottom:5px;line-height:1.35'>"
+            "<strong>EMODnet — pan-European broad-scale overview.</strong> "
+            "A harmonised continental compilation that is often modelled/predicted and "
+            "lower-confidence than HB19. Shown for context and visual continuity with the "
+            "Europe map — <em>not</em> used in the co-location or gap analysis.</div>"
+            f"<div style='display:flex;align-items:center;margin:2px 0'>"
+            f"<span style='display:inline-block;width:14px;height:9px;background:{swatch_color};"
+            f"opacity:.85;margin-right:6px;border:1px solid #333'></span>"
+            f"<span>{label}</span></div>"
+            "<div style='font-size:10.5px;color:#777;margin-top:3px'>"
+            "Extent layer (EMODnet Seabed Habitats WMS), clipped to Norwegian waters; "
+            "broad coverage at all zooms, finer detail at zoom 8+. No click pop-ups.</div>"
+        )
+    add_layer_metadata(
+        "EMODnet seagrass extent (broad-scale)",
+        _emodnet_hab_legend("#6a3d9a", "Seagrass (EMODnet, modelled/observed)"),
+        source_groups["emodnet_habitats"],
+    )
+    add_layer_metadata(
+        "EMODnet macroalgae / kelp extent (broad-scale)",
+        _emodnet_hab_legend("#e07000", "Macroalgae / kelp (EMODnet, modelled/observed)"),
+        source_groups["emodnet_habitats"],
     )
 
     protected_layer_name = f"Protected areas: marine relevant ({context_counts.get('protected_all', 0):,})"
@@ -2316,9 +2531,13 @@ def main() -> None:
         "Study Sites": [
             "Study sites",
         ],
-        "Habitats": [
-            "Naturbase HB19: mapped eelgrass areas (WMS)",
-            "Naturbase HB19: mapped kelp forest occurrences (WMS)",
+        "Field Survey Habitats": [
+            "Naturbase HB19: eelgrass extent",
+            "Naturbase HB19: kelp forest extent",
+        ],
+        "EMODnet Habitats": [
+            "EMODnet seagrass extent (broad-scale)",
+            "EMODnet macroalgae / kelp extent (broad-scale)",
         ],
         "Research Networks": [
             f"MASSIMAL remote-sensing field sites ({context_counts.get('massimal', 0):,})",
@@ -2364,8 +2583,17 @@ def main() -> None:
             f"Fish habitat suitability: Norwegian waters (heatmap, {context_counts.get('fish_habitat', 0):,} cells)",
         ],
     }
-    norway_auto_enable = ["Study Sites", "Habitats", "Carbon Data"]
-    inject_grouped_layer_control(fmap, norway_layer_groups, norway_auto_enable)
+    # HB19 field-survey habitats auto-on (they only resolve when zoomed in, and
+    # co-location is already auto-on). EMODnet stays off by default so HB19 reads
+    # as the headline dataset. Sedimentation is excluded from auto-enable even
+    # though its "Carbon Data" group is auto-on — it's too visually busy, so it's
+    # manual-toggle only at every zoom.
+    norway_auto_enable = ["Study Sites", "Field Survey Habitats", "Carbon Data"]
+    norway_auto_exclude = [
+        f"Sedimentation rates: Norway ({context_counts.get('sedimentation', 0):,})",
+    ]
+    inject_grouped_layer_control(fmap, norway_layer_groups, norway_auto_enable,
+                                 auto_exclude_layers=norway_auto_exclude)
     inject_region_zoom_control(fmap)
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
