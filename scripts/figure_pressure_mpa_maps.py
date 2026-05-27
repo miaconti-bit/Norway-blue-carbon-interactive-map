@@ -14,7 +14,7 @@ Input:
   data/processed/spatial_analysis/habitat_colocation_metrics.csv
 
 Output:
-  figures/figure_pressure_mpa_maps.png / .pdf
+  figures/figure_pressure_mpa_maps.png
 """
 
 from __future__ import annotations
@@ -28,6 +28,8 @@ import pandas as pd
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
+
+from figure_style import add_caption, use_min_font
 
 ROOT = Path(__file__).resolve().parent.parent
 METRICS_PATH = ROOT / "data" / "processed" / "spatial_analysis" / "habitat_colocation_metrics.csv"
@@ -54,9 +56,9 @@ def norway_aspect(ax) -> None:
     ax.set_xlim(LON_MIN, LON_MAX)
     ax.set_ylim(LAT_MIN, LAT_MAX)
     ax.set_facecolor("#eaf4fb")
-    ax.set_xlabel("Longitude", fontsize=8.5)
-    ax.set_ylabel("Latitude", fontsize=8.5)
-    ax.tick_params(labelsize=8)
+    ax.set_xlabel("Longitude", fontsize=9)
+    ax.set_ylabel("Latitude", fontsize=9)
+    ax.tick_params(labelsize=9)
     for spine in ax.spines.values():
         spine.set_linewidth(0.6)
 
@@ -68,9 +70,10 @@ def size_from_area(area_km2: np.ndarray) -> np.ndarray:
 
 
 def render(df: pd.DataFrame) -> Path:
+    use_min_font()
     fig = plt.figure(figsize=(13, 8.5))
     gs = GridSpec(1, 2, figure=fig, wspace=0.10,
-                  left=0.06, right=0.97, top=0.84, bottom=0.12)
+                  left=0.06, right=0.97, top=0.95, bottom=0.18)
     ax1 = fig.add_subplot(gs[0, 0])
     ax2 = fig.add_subplot(gs[0, 1])
 
@@ -100,9 +103,9 @@ def render(df: pd.DataFrame) -> Path:
         ax=ax1, orientation="horizontal", pad=0.08, fraction=0.04,
         ticks=[0, 1.5, 4, 8.5, 30],
     )
-    cb1.set_label("Co-location pressure index\n(dredging + aquaculture + platforms within 5 km)", fontsize=8)
+    cb1.set_label("Co-location pressure index\n(dredging + aquaculture + platforms within 5 km)", fontsize=9)
     cb1.ax.set_xticklabels(["0\n(none)", "1–2\n(trace)", "3–5\n(mod.)", "6–11\n(high)", "12+\n(severe)"],
-                            fontsize=7.5)
+                            fontsize=9)
 
     ax1.set_title("A.  Co-location Pressure Index", loc="left",
                   fontweight="bold", fontsize=11, pad=6)
@@ -130,9 +133,9 @@ def render(df: pd.DataFrame) -> Path:
         ax=ax2, orientation="horizontal", pad=0.08, fraction=0.04,
         ticks=[0.005, 0.5, 5, 30, 75],
     )
-    cb2.set_label("Polygon area in strict marine MPA (%)\n(MarintVerneomraade only)", fontsize=8)
+    cb2.set_label("Polygon area in strict marine MPA (%)\n(MarintVerneomraade only)", fontsize=9)
     cb2.ax.set_xticklabels(["0%\n(none)", "<1%\n(trace)", "1–10%\n(low)", "10–50%\n(partial)", "50%+\n(high)"],
-                            fontsize=7.5)
+                            fontsize=9)
     ax2.set_ylabel("")
 
     ax2.set_title("B.  Strict MPA Coverage", loc="left",
@@ -141,17 +144,13 @@ def render(df: pd.DataFrame) -> Path:
     n_kelp = (df["ecosystem"] == "macroalgae").sum()
     n_sg   = (df["ecosystem"] == "seagrass").sum()
 
-    fig.suptitle(
-        "Eelgrass and Kelp Habitat Polygons: Pressure and MPA Coverage (Norway)",
-        fontsize=13, fontweight="bold", y=0.97,
-    )
-    fig.text(
-        0.5, 0.935,
-        f"{n_sg:,} eelgrass + {n_kelp:,} kelp polygons (HB19 Naturbase). "
-        "Point size ∝ habitat area. Grey = no signal. "
-        "Strict MPA = MarintVerneomraade only.",
-        fontsize=8.5, color="#555", ha="center",
-    )
+    add_caption(
+        fig,
+        f"Eelgrass and kelp habitat polygons: pressure and MPA coverage (Norway). Each point is the centroid of "
+        f"one mapped habitat polygon ({n_sg:,} eelgrass + {n_kelp:,} kelp; HB19 Naturbase), sized by habitat "
+        "area; grey = no signal. Panel A: co-location pressure index (dredging + aquaculture + platforms within "
+        "5 km). Panel B: fraction of each polygon's area within a strict marine MPA (MarintVerneomraade only).",
+        y=0.015, fontsize=9)
 
     # Size-scale legend only (dots are coloured by pressure or MPA, not by ecosystem)
     size_handles = []
@@ -165,14 +164,12 @@ def render(df: pd.DataFrame) -> Path:
     # Place size legend at far right, outside the panel
     ax2.legend(handles=size_handles, loc="center left",
                bbox_to_anchor=(1.02, 0.5),
-               fontsize=8.5, title="Marker size\n= habitat area",
-               title_fontsize=8.5, frameon=True, edgecolor="#ccc",
+               fontsize=9, title="Marker size\n= habitat area",
+               title_fontsize=9, frameon=True, edgecolor="#ccc",
                framealpha=0.9)
 
     out_png = FIG_DIR / "figure_pressure_mpa_maps.png"
-    out_pdf = FIG_DIR / "figure_pressure_mpa_maps.pdf"
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
-    fig.savefig(out_pdf, bbox_inches="tight")
     plt.close(fig)
     return out_png
 

@@ -66,6 +66,9 @@ docs/*.docx
 # ── Map output (too large for git — generate locally or see GitHub Releases) ─
 maps/norway.html
 
+# ── Figure archive (kept local only — superseded / draft figures) ────────────
+figures/archive/
+
 # ── Zip archives ──────────────────────────────────────────────────────────────
 *.zip
 

@@ -16,7 +16,6 @@ Inputs:
 
 Outputs:
   figures/figure_pressures_synthesis.png
-  figures/figure_pressures_synthesis.pdf
 """
 
 from __future__ import annotations
@@ -28,6 +27,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.gridspec import GridSpec
+
+from figure_style import add_caption, use_min_font
 
 ROOT = Path(__file__).resolve().parent.parent
 PROC = ROOT / "data" / "processed"
@@ -196,7 +197,7 @@ def panel_a_heatmap(ax, df: pd.DataFrame) -> None:
         )
         ax.add_patch(rect)
         ax.text(np.mean(col_idxs), -1.29, label,
-                ha="center", va="center", fontsize=8, fontweight="bold",
+                ha="center", va="center", fontsize=9, fontweight="bold",
                 color="white")
 
     ax.set_xlim(-2.1, n_cols - 0.38)
@@ -204,7 +205,7 @@ def panel_a_heatmap(ax, df: pd.DataFrame) -> None:
     ax.invert_yaxis()
 
     ax.set_xticks(range(n_cols))
-    ax.set_xticklabels([lbl for _, lbl, *_ in indicators], fontsize=8.5, ha="center")
+    ax.set_xticklabels([lbl for _, lbl, *_ in indicators], fontsize=9, ha="center")
     ax.xaxis.set_ticks_position("top")
     ax.xaxis.set_label_position("top")
     ax.tick_params(axis="x", length=0, pad=3)
@@ -276,7 +277,7 @@ def panel_b_pressure_decomp(ax, df: pd.DataFrame) -> None:
         pos += 0.5
 
     ax.set_yticks(y_positions)
-    ax.set_yticklabels(y_labels, fontsize=8.5)
+    ax.set_yticklabels(y_labels, fontsize=9)
     ax.invert_yaxis()
     ax.set_xlabel("Cumulative relative pressure (normalized 0–1 per component)", fontsize=9)
     ax.set_title("B.  Pressure Decomposition by Region and Habitat", loc="left",
@@ -287,7 +288,7 @@ def panel_b_pressure_decomp(ax, df: pd.DataFrame) -> None:
     legend_handles = [mpatches.Patch(facecolor=c, edgecolor="#666", linewidth=0.5, label=lbl)
                       for (_, lbl), c in zip(components, component_palette)]
     ax.legend(handles=legend_handles, loc="upper right",
-              ncol=1, frameon=True, fontsize=8,
+              ncol=1, frameon=True, fontsize=9,
               framealpha=0.92, edgecolor="#ccc")
 
 
@@ -296,12 +297,13 @@ def panel_b_pressure_decomp(ax, df: pd.DataFrame) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def render(df: pd.DataFrame) -> Path:
+    use_min_font()
     fig = plt.figure(figsize=(15, 8))
     gs = GridSpec(
         1, 2, figure=fig,
         width_ratios=[1.0, 1.1],
         wspace=0.42,
-        left=0.09, right=0.97, top=0.82, bottom=0.17,
+        left=0.09, right=0.97, top=0.90, bottom=0.20,
     )
 
     ax_a = fig.add_subplot(gs[0, 0])
@@ -310,12 +312,8 @@ def render(df: pd.DataFrame) -> Path:
     panel_a_heatmap(ax_a, df)
     panel_b_pressure_decomp(ax_b, df)
 
-    fig.suptitle(
-        "Norwegian Eelgrass and Kelp: Co-location Profile and Pressure Decomposition",
-        fontsize=14, fontweight="bold", y=0.98,
-    )
-
     caption = (
+        "Norwegian eelgrass and kelp: co-location profile and pressure decomposition. "
         "Panel A: Co-location profile. Cells are min-max normalized within each indicator column; "
         "raw values are annotated. Protection (green): % habitat in strict MPA; % under any designation. "
         "Pressure (red): total anthropogenic pressure per km² of habitat — sum of dredging, aquaculture, "
@@ -328,15 +326,10 @@ def render(df: pd.DataFrame) -> Path:
         "Unprotected share = 1 − (% habitat under any protection). "
         "Oslofjord seagrass sites are included in the Skagerrak aggregate."
     )
-    fig.text(0.09, 0.022, caption, fontsize=7.5, color="#444",
-             ha="left", wrap=True, style="italic",
-             bbox=dict(facecolor="#f9f9f9", edgecolor="#ddd",
-                       boxstyle="round,pad=0.4", linewidth=0.5))
+    add_caption(fig, caption, x=0.09, y=0.018, ha="left", fontsize=9)
 
     out_png = FIG / "figure_pressures_synthesis.png"
-    out_pdf = FIG / "figure_pressures_synthesis.pdf"
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
-    fig.savefig(out_pdf, bbox_inches="tight")
     plt.close(fig)
     return out_png
 

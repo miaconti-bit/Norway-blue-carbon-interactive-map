@@ -19,7 +19,7 @@ guarantee ecosystem health — environmental quality improvement is a prerequisi
 Source: Dahl et al. (2024); compiled roadmap database.
 
 Output:
-  figures/figure_balsfjord.png / .pdf
+  figures/figure_balsfjord.png
 """
 
 from __future__ import annotations
@@ -31,6 +31,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 import numpy as np
 from matplotlib.gridspec import GridSpec
+
+from figure_style import add_caption, use_min_font
 
 FIG_DIR = Path(__file__).resolve().parent.parent / "figures"
 FIG_DIR.mkdir(exist_ok=True)
@@ -88,7 +90,7 @@ def panel_a_conditions(ax) -> None:
                 f"{ratio:.2f}×", va="center", fontsize=10, fontweight="bold",
                 color=COLOR_A)
         ax.text(1.0 + 0.1, y[i] - bar_h / 2,
-                "1.0× (baseline)", va="center", fontsize=8.5,
+                "1.0× (baseline)", va="center", fontsize=9,
                 color="#555", style="italic")
 
     # Direction arrows at right edge (orange = more stress, blue = lower performance)
@@ -100,7 +102,7 @@ def panel_a_conditions(ax) -> None:
                 symbol, color=color, **arrow_kw)
         ax.text(max(ratios) * 1.30, y[i] + bar_h / 2,
                 "stress" if direction == "stress" else "performance",
-                va="center", fontsize=7.5, color=color, style="italic")
+                va="center", fontsize=9, color=color, style="italic")
 
     ax.set_yticks(y)
     ax.set_yticklabels(metrics, fontsize=11)
@@ -172,33 +174,36 @@ def panel_b_outcome(ax) -> None:
 
     ax.text(0.50, 0.50,
             "Change in eelgrass\ncover area (%)",
-            ha="center", va="center", fontsize=8,
+            ha="center", va="center", fontsize=9,
             color="#777", style="italic",
             bbox=dict(facecolor="white", edgecolor="#ccc",
                       boxstyle="round,pad=0.3", linewidth=0.5))
 
 
 def render() -> Path:
+    use_min_font()
     fig = plt.figure(figsize=(13, 6.5))
     gs = GridSpec(1, 2, figure=fig, width_ratios=[1.3, 1.0],
                   wspace=0.14, left=0.08, right=0.96,
-                  top=0.88, bottom=0.12)
+                  top=0.93, bottom=0.20)
     ax_a = fig.add_subplot(gs[0, 0])
     ax_b = fig.add_subplot(gs[0, 1])
 
     panel_a_conditions(ax_a)
     panel_b_outcome(ax_b)
 
-    fig.suptitle(
-        "Balsfjord Case Study: Divergent Eelgrass Responses\n"
-        "Under Contrasting Eutrophication Regimes",
-        fontsize=13, fontweight="bold", y=1.00,
-    )
+    add_caption(
+        fig,
+        "Balsfjord case study: divergent eelgrass responses under contrasting eutrophication regimes at two "
+        "Ramsar-protected sites in northern Norway. Panel A: environmental indicators at Sørkjosleira (high "
+        "stress) relative to Kobbevågen (low stress, baseline = 1.0×); ▲ = greater stressor, ▼ = lower "
+        "performance. Panel B: change in eelgrass cover area over the monitoring period at each site. Legal "
+        "protection alone does not ensure recovery — environmental quality is the prerequisite. "
+        "Source: Dahl et al. (2024); compiled roadmap database.",
+        y=0.015, fontsize=9)
 
     out_png = FIG_DIR / "figure_balsfjord.png"
-    out_pdf = FIG_DIR / "figure_balsfjord.pdf"
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
-    fig.savefig(out_pdf, bbox_inches="tight")
     plt.close(fig)
     return out_png
 

@@ -20,7 +20,7 @@ Input:
   data/Norway_Seagrass_ Master_Database (4).xlsx  — "Site level" sheet
 
 Output:
-  figures/figure_environmental_drivers.png / .pdf
+  figures/figure_environmental_drivers.png
 """
 
 from __future__ import annotations
@@ -32,6 +32,8 @@ import numpy as np
 import pandas as pd
 from matplotlib.gridspec import GridSpec
 from scipy import stats
+
+from figure_style import add_caption, use_min_font
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "Norway_Seagrass_ Master_Database (4).xlsx"
@@ -132,7 +134,7 @@ def scatter_panel(ax, x, y, regions, *, xlabel, title_letter, title_text,
     if note:
         # Place N count below the x-axis label to avoid overlapping data points
         ax.text(0.5, -0.22, note, transform=ax.transAxes,
-                fontsize=7.5, color="#666", style="italic",
+                fontsize=9, color="#666", style="italic",
                 ha="center", va="top")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -140,6 +142,7 @@ def scatter_panel(ax, x, y, regions, *, xlabel, title_letter, title_text,
 
 
 def render(df: pd.DataFrame) -> Path:
+    use_min_font()
     fig = plt.figure(figsize=(13, 10))
     gs = GridSpec(2, 2, figure=fig, hspace=0.62, wspace=0.35,
                   left=0.09, right=0.97, top=0.88, bottom=0.14)
@@ -204,18 +207,17 @@ def render(df: pd.DataFrame) -> Path:
                bbox_to_anchor=(0.54, 0.965), ncol=3, frameon=False,
                fontsize=9, title="Region", title_fontsize=9)
 
-    fig.suptitle("Environmental Drivers of Eelgrass Carbon Storage in Norway",
-                 fontsize=14, fontweight="bold", y=0.998)
-    fig.text(0.09, 0.022,
-             "Data: Gagnon et al. (2024); Rohr et al. (2018) [Røvik]. "
-             "Panels A and C use per-core data; panels B and D use site means. "
-             "Dashed line = OLS regression; R² and p-value shown per panel.",
-             fontsize=7.5, color="#666", ha="left", style="italic")
+    add_caption(
+        fig,
+        "Environmental drivers of eelgrass carbon storage in Norway. Sediment carbon stock (g C m⁻²) against four "
+        "drivers: dry bulk density (A), aboveground biomass (B), water depth (C), and mean water temperature (D). "
+        "Points coloured by region. Panels A and C use per-core data; panels B and D use site means. "
+        "Dashed line = OLS regression; R² and p-value shown per panel. "
+        "Data: Gagnon et al. (2024); Rohr et al. (2018) [Røvik].",
+        x=0.09, y=0.022, ha="left", fontsize=9)
 
     out_png = FIG_DIR / "figure_environmental_drivers.png"
-    out_pdf = FIG_DIR / "figure_environmental_drivers.pdf"
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
-    fig.savefig(out_pdf, bbox_inches="tight")
     plt.close(fig)
     return out_png
 

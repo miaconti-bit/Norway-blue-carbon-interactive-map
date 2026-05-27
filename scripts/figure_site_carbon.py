@@ -14,7 +14,7 @@ Inputs:
   data/Gagnon 2024 s1 carbon.xlsx                 — "Data-cores"
 
 Output:
-  figures/figure_site_carbon.png / .pdf
+  figures/figure_site_carbon.png
 """
 
 from __future__ import annotations
@@ -27,6 +27,8 @@ import numpy as np
 import pandas as pd
 from matplotlib.gridspec import GridSpec
 from scipy import stats
+
+from figure_style import add_caption, use_min_font
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "Norway_Seagrass_ Master_Database (4).xlsx"
@@ -123,7 +125,7 @@ def panel_a_site_stocks(ax, df: pd.DataFrame) -> None:
     ax.axhline(pool_mean, color="#333", linewidth=1.4, linestyle="--", zorder=4)
     ax.text(len(sites_in_order) - 0.3, pool_mean * 1.04,
             f"Pooled mean\n{pool_mean:,.0f} g C m⁻²",
-            ha="right", fontsize=8, color="#333")
+            ha="right", fontsize=9, color="#333")
 
     # Region band labels below x-axis
     region_spans = {}
@@ -140,14 +142,14 @@ def panel_a_site_stocks(ax, df: pd.DataFrame) -> None:
     for region, positions in region_spans.items():
         mid = np.mean(positions)
         ax.text(mid, -1250, region_band_label.get(region, region),
-                ha="center", va="top", fontsize=8,
+                ha="center", va="top", fontsize=9,
                 color=REGION_COLOR[region], fontweight="bold")
         ax.plot([min(positions) - 0.4, max(positions) + 0.4],
                 [-950, -950], color=REGION_COLOR[region], linewidth=2)
 
     # Site name labels (rotated)
     ax.set_xticks(list(x_pos.values()))
-    ax.set_xticklabels(list(x_pos.keys()), rotation=35, ha="right", fontsize=8.5)
+    ax.set_xticklabels(list(x_pos.keys()), rotation=35, ha="right", fontsize=9)
     ax.tick_params(axis="x", length=0)
     ax.set_xlim(-0.7, len(sites_in_order) - 0.3)
     ax.set_ylim(-1700, df["carbon"].max() * 1.15)
@@ -164,7 +166,7 @@ def panel_a_site_stocks(ax, df: pd.DataFrame) -> None:
         plt.scatter([], [], s=160, color="#aaa", edgecolor="black", linewidth=1.2,
                     label="Site mean"),
     ]
-    ax.legend(handles=handles, frameon=False, fontsize=8, loc="upper right")
+    ax.legend(handles=handles, frameon=False, fontsize=9, loc="upper right")
 
 
 def panel_b_comparison(ax, df: pd.DataFrame) -> None:
@@ -209,10 +211,10 @@ def panel_b_comparison(ax, df: pd.DataFrame) -> None:
         # Eelgrass (i=1) label on left; Unvegetated (i=2) on right
         if i == 1:
             ax.text(i - 0.35, mean_val, f"mean\n{mean_val:,.0f}",
-                    va="center", ha="right", fontsize=8)
+                    va="center", ha="right", fontsize=9)
         else:
             ax.text(i + 0.32, mean_val, f"mean\n{mean_val:,.0f}",
-                    va="center", ha="left", fontsize=8)
+                    va="center", ha="left", fontsize=9)
 
     y_max = max(df["carbon"])
 
@@ -231,7 +233,7 @@ def panel_b_comparison(ax, df: pd.DataFrame) -> None:
 
     n_labels = [f"n = {len(d)} cores" for d in data_by_group]
     for i, lbl in enumerate(n_labels, start=1):
-        ax.text(i, -650, lbl, ha="center", va="top", fontsize=8, color="#555")
+        ax.text(i, -650, lbl, ha="center", va="top", fontsize=9, color="#555")
 
     ax.set_xticks([1, 2])
     ax.set_xticklabels(groups, fontsize=11)
@@ -253,31 +255,30 @@ def panel_b_comparison(ax, df: pd.DataFrame) -> None:
         plt.scatter([], [], color="white", s=90, edgecolor="black", linewidth=1.4,
                     marker="D", label="Group mean"),
     ]
-    ax.legend(handles=leg_handles, frameon=False, fontsize=8, loc="upper right")
+    ax.legend(handles=leg_handles, frameon=False, fontsize=9, loc="upper right")
 
 
 def render(site_df: pd.DataFrame, comp_df: pd.DataFrame) -> Path:
+    use_min_font()
     fig = plt.figure(figsize=(14, 7))
     gs = GridSpec(1, 2, figure=fig, width_ratios=[1.6, 1.0],
-                  wspace=0.32, left=0.07, right=0.97, top=0.88, bottom=0.23)
+                  wspace=0.32, left=0.07, right=0.97, top=0.94, bottom=0.27)
     ax_a = fig.add_subplot(gs[0, 0])
     ax_b = fig.add_subplot(gs[0, 1])
 
     panel_a_site_stocks(ax_a, site_df)
     panel_b_comparison(ax_b, comp_df)
 
-    fig.suptitle("Norwegian Eelgrass Sediment Carbon Stocks",
-                 fontsize=14, fontweight="bold", y=0.98)
-    fig.text(0.5, 0.02,
-             "Panel A: 9 eelgrass sites (Gagnon et al. 2024; Rohr et al. 2018). "
-             "Large markers = site means; small markers = individual cores. "
-             "Panel B: per-core seagrass vs. unvegetated comparison (Gagnon 2024); ◆ = group mean.",
-             fontsize=7.5, color="#666", ha="center", style="italic")
+    add_caption(
+        fig,
+        "Norwegian eelgrass sediment carbon stocks. Panel A: site-level stocks across 9 eelgrass sites "
+        "(Gagnon et al. 2024; Rohr et al. 2018); large markers = site means, small markers = individual cores, "
+        "dashed line = national pooled mean. Panel B: per-core comparison of eelgrass vs. unvegetated sediments "
+        "(Gagnon 2024); ◆ = group mean.",
+        y=0.02, fontsize=9)
 
     out_png = FIG_DIR / "figure_site_carbon.png"
-    out_pdf = FIG_DIR / "figure_site_carbon.pdf"
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
-    fig.savefig(out_pdf, bbox_inches="tight")
     plt.close(fig)
     return out_png
 

@@ -18,7 +18,7 @@ Reads:
   data/processed/step2_valuation.csv
   data/processed/spatial_analysis/regional_colocation_summary.csv
 
-Writes to figures/carbon_stocks/:
+Writes to figures/:
   fig09_seagrass_bootstrap.png
   fig11_carbon_balance_sheet.png
   carbon_stock_estimates.csv
@@ -35,11 +35,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from figure_style import add_caption, use_min_font
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROC = REPO_ROOT / "data" / "processed"
 SPATIAL = PROC / "spatial_analysis"
-OUT_DIR = REPO_ROOT / "figures" / "carbon_stocks"
+OUT_DIR = REPO_ROOT / "figures"
 
 MASTER_PATH = PROC / "norway_blue_carbon_master_sites.csv"
 STEP2_REGIONAL_PATH = PROC / "step2_seagrass_stocks_by_region.csv"
@@ -59,6 +61,12 @@ MACROALGAE_NATIONAL_STOCK_KT_C = 2600.0
 MACROALGAE_SEQ_MT_CO2_YR = 1.7
 MACROALGAE_SEQ_MT_CO2_YR_RANGE = (0.36 * 44 / 12 * 1.0,
                                   4.1 * 44 / 12 * 1.0 / 10)  # placeholder; see step2
+
+# Macroalgae sequestration transfer-function range: Krause-Jensen & Duarte 2016
+# export/sequestration fraction (central 25.5%, range 23.2-61.6%). This single
+# parameter is the dominant macroalgae uncertainty; the Mt CO2/yr figures it
+# produces are in step2_national_sequestration.csv (seq_mt_co2_yr + CI).
+MACROALGAE_SEQ_FRACTION_PCT = (23.2, 25.5, 61.6)
 
 ECO_COLORS = {"seagrass": "#74c476", "macroalgae": "#2c6e49"}
 REGION_COLORS = {
@@ -107,6 +115,10 @@ def load_hb19_extent() -> pd.DataFrame:
     return df[["ecosystem", "canonical_region", "habitat_polygons_n", "habitat_area_km2"]]
 
 
+def load_national_seq() -> pd.DataFrame:
+    return pd.read_csv(STEP2_NATIONAL_PATH)
+
+
 # ---------------------------------------------------------------------------
 # fig09: bootstrap CI on national seagrass stock
 # ---------------------------------------------------------------------------
@@ -128,12 +140,17 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
     median = float(np.median(national_kt_c))
     ci_low, ci_high = (float(v) for v in np.percentile(national_kt_c, [2.5, 97.5]))
 
-    # Macroalgae: fixed literature density x extent; uncertainty = mapped vs modelled extent.
-    ma_density = MACROALGAE_NATIONAL_STOCK_KT_C / MACROALGAE_EXTENT_KM2_GUNDERSEN * 1000.0
-    ma_hb19_area = hb19[hb19["ecosystem"] == "macroalgae"]["habitat_area_km2"].sum()
-    ma_mapped = ma_density * ma_hb19_area * 1_000_000 / 1e9
-    ma_modelled = float(MACROALGAE_NATIONAL_STOCK_KT_C)
-    ma_lo, ma_hi = sorted([ma_mapped, ma_modelled])
+    # Macroalgae: no Norwegian field stock data. Its dominant uncertainty is the
+    # literature transfer function, documented for the export/sequestration
+    # fraction, so it is shown on annual sequestration (Mt CO2/yr) from step2.
+    nat = load_national_seq().set_index("ecosystem")
+    sg_seq = float(nat.loc["seagrass", "seq_mt_co2_yr"])
+    sg_seq_sd = float(nat.loc["seagrass", "seq_mt_co2_yr_sd"])
+    sg_seq_err = 1.96 * sg_seq_sd
+    ma_seq = float(nat.loc["macroalgae", "seq_mt_co2_yr"])
+    ma_seq_lo = float(nat.loc["macroalgae", "seq_mt_co2_yr_ci_low"])
+    ma_seq_hi = float(nat.loc["macroalgae", "seq_mt_co2_yr_ci_high"])
+    frac_lo, frac_mid, frac_hi = MACROALGAE_SEQ_FRACTION_PCT
 
     def _clean(ax):
         ax.spines["top"].set_visible(False)
@@ -154,14 +171,14 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
     ax.axvline(357.6, color=pub_color, linewidth=1.6)
     ax.set_xlim(right=max(float(national_kt_c.max()), 357.6) * 1.04)
     ax.text(0.03, 0.97,
-            f"{median:,.0f} kt C\n95% CI  {ci_low:,.0f}–{ci_high:,.0f}\n"
+            f"{median:,.0f} Gg C\n95% CI  {ci_low:,.0f}–{ci_high:,.0f}\n"
             f"(± {(ci_high - ci_low) / 2 / median * 100:.0f}%)",
             transform=ax.transAxes, va="top", ha="left", fontsize=11,
             fontweight="bold", color=dark,
             bbox=dict(facecolor="white", edgecolor=dark, boxstyle="round,pad=0.5", linewidth=1.0))
     ax.text(357.6, ymax_a * 0.97, "Frigstad 2020 ", color=pub_color,
-            fontsize=7.5, ha="right", va="top")
-    ax.set_xlabel("National seagrass stock (kt C)", fontsize=9.5)
+            fontsize=9, ha="right", va="top")
+    ax.set_xlabel("National seagrass stock (Gg C)", fontsize=9.5)
     ax.set_ylabel("Bootstrap resamples", fontsize=9.5)
     ax.set_title("A.  Seagrass — Bootstrap Estimate", loc="left",
                  fontweight="bold", fontsize=12)
@@ -175,73 +192,99 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
                linewidth=0.6, alpha=0.85, zorder=3)
     mean_v = float(site_vals.mean())
     ax.axhline(mean_v, color=dark, linestyle="--", linewidth=1.2)
-    ax.text(0.45, mean_v, f"mean {mean_v:,.0f}", fontsize=8, color=dark,
+    ax.text(0.45, mean_v, f"mean {mean_v:,.0f}", fontsize=9, color=dark,
             va="bottom", ha="right")
     ax.text(0.97, 0.97,
             f"n = {len(site_vals)} sites\n"
             f"range {site_vals.min():,.0f}–{site_vals.max():,.0f}\n"
             f"CV = {site_vals.std(ddof=1) / mean_v * 100:.0f}%",
-            transform=ax.transAxes, va="top", ha="right", fontsize=8.5, color="#333",
+            transform=ax.transAxes, va="top", ha="right", fontsize=9, color="#333",
             bbox=dict(facecolor="white", edgecolor="#ddd", boxstyle="round,pad=0.4", linewidth=0.6))
     ax.set_xlim(-0.5, 0.5)
     ax.set_xticks([])
     ax.set_ylim(0, site_vals.max() * 1.12)
     ax.set_ylabel("Site carbon density (g C m⁻²)", fontsize=9.5)
-    ax.set_title("B.  Why So Uncertain — the 9 Measurements", loc="left",
+    ax.set_title("B.  Data Spread — Source of the Uncertainty", loc="left",
                  fontweight="bold", fontsize=12)
     _clean(ax)
 
-    # (C) Macroalgae national stock — extent-based range (no field data to bootstrap)
+    # (C) Macroalgae sequestration — what the transfer function does to the answer.
+    #     Annual CO2 sequestration is the standing stock × the fraction that is
+    #     exported and buried. That export/sequestration fraction (Krause-Jensen &
+    #     Duarte 2016) is the dominant unknown: as it ranges 23-62% the answer
+    #     ranges 1.3-4.1 Mt CO2/yr. Shown as three points along that spread.
     ax = axes[1, 0]
-    svals = [ma_mapped, ma_modelled]
-    ax.bar(xs, svals, width=0.55, color=ma_color, edgecolor="black", linewidth=0.6)
-    for x, v in zip(xs, svals):
-        ax.text(x, v + max(svals) * 0.02, f"{v:,.0f} kt C", ha="center",
-                va="bottom", fontsize=9, fontweight="bold")
-    ax.set_xticks(xs)
-    ax.set_xticklabels(["HB19 mapped\nextent", "Gundersen 2021\nmodelled extent"], fontsize=8.5)
-    ax.set_ylim(0, max(svals) * 1.18)
-    ax.set_ylabel("Macroalgae national stock (kt C)", fontsize=9.5)
-    ax.set_title("C.  Macroalgae — Extent Range (no field data)", loc="left",
+    seq_pts = [ma_seq_lo, ma_seq, ma_seq_hi]
+    frac_pts = [frac_lo, frac_mid, frac_hi]
+    names = ["low", "central", "high"]
+    pt_colors = [ma_color, dark, ma_color]
+    ax.plot([ma_seq_lo, ma_seq_hi], [0, 0], color=ma_color, linewidth=4.0,
+            alpha=0.35, solid_capstyle="round", zorder=1)
+    for s, frac, name, c in zip(seq_pts, frac_pts, names, pt_colors):
+        is_mid = name == "central"
+        ax.scatter(s, 0, s=320 if is_mid else 150, color=c, edgecolor="black",
+                   linewidth=1.0, zorder=3)
+        dy, va = (0.45, "bottom") if is_mid else (-0.45, "top")
+        ax.text(s, dy,
+                f"{name}\n{frac:.1f}% exported\n→ {s:.1f} Mt CO₂ yr⁻¹",
+                ha="center", va=va, fontsize=9,
+                fontweight="bold" if is_mid else "normal",
+                color=dark if is_mid else "#444")
+    ax.set_ylim(-1.3, 1.3)
+    ax.set_yticks([])
+    ax.set_xlim(0, ma_seq_hi * 1.22)
+    ax.set_xlabel("Annual CO₂ sequestration (Mt CO₂ yr⁻¹)", fontsize=9.5)
+    ax.set_title("C.  Macroalgae — Transfer-Function Spread", loc="left",
                  fontweight="bold", fontsize=12)
+    ax.text(0.5, 0.99,
+            "Stock (≈ 2,600 Gg C) is well constrained; the export/sequestration fraction is not.\n"
+            "Central 25.5% (large dot) = best estimate; 23–62% = published literature range\n"
+            "(Krause-Jensen & Duarte 2016), which alone drives the spread shown below.",
+            transform=ax.transAxes, va="top", ha="center", fontsize=9, color="#555")
+    ax.spines["left"].set_visible(False)
     _clean(ax)
 
-    # (D) Both habitats, log scale, with their (different) uncertainty
+    # (D) Both habitats' annual sequestration, log scale, with their
+    #     different uncertainty types: sampling CI vs transfer-function range.
     ax = axes[1, 1]
-    meds = [median, (ma_lo + ma_hi) / 2]
-    lo_err = [median - ci_low, (ma_hi - ma_lo) / 2]
-    hi_err = [ci_high - median, (ma_hi - ma_lo) / 2]
+    meds = [sg_seq, ma_seq]
+    lo_err = [sg_seq_err, ma_seq - ma_seq_lo]
+    hi_err = [sg_seq_err, ma_seq_hi - ma_seq]
     ax.bar(xs, meds, width=0.5, color=[sg_color, ma_color], edgecolor="black",
            linewidth=0.6, yerr=[lo_err, hi_err], capsize=8,
-           error_kw=dict(elinewidth=1.5, capthick=1.5))
+           error_kw=dict(elinewidth=1.5, capthick=1.5, ecolor="#333"))
     ax.set_yscale("log")
-    ax.set_ylim(50, 6000)
-    val_lbls = [f"{median:,.0f}\n[{ci_low:,.0f}–{ci_high:,.0f}]",
-                f"{(ma_lo + ma_hi) / 2:,.0f}\n[{ma_lo:,.0f}–{ma_hi:,.0f}]"]
-    unc_lbls = ["95% bootstrap CI", "extent range"]
-    for x, m, he, vl, ul in zip(xs, meds, hi_err, val_lbls, unc_lbls):
-        ax.text(x, (m + he) * 1.3, vl, ha="center", va="bottom",
-                fontsize=8.5, fontweight="bold")
-        ax.text(x, 62, ul, ha="center", va="bottom", fontsize=7.5,
-                style="italic", color="#555")
+    ax.set_ylim(0.005, 30)
+    # Value + CI labels sit above each error-bar cap, on white, so they never
+    # overlap the bars or the (dark grey) error bars.
+    val_lbls = [f"{sg_seq:.3f}\n[{sg_seq - sg_seq_err:.3f}–{sg_seq + sg_seq_err:.3f}]",
+                f"{ma_seq:.1f}\n[{ma_seq_lo:.1f}–{ma_seq_hi:.1f}]"]
+    cap_tops = [sg_seq + sg_seq_err, ma_seq_hi]
+    for x, top, vl in zip(xs, cap_tops, val_lbls):
+        ax.text(x, top * 1.6, vl, ha="center", va="bottom",
+                fontsize=9, fontweight="bold", color="#222")
     ax.set_xticks(xs)
-    ax.set_xticklabels(["Seagrass", "Macroalgae"], fontsize=10)
-    ax.set_ylabel("National stock (kt C, log scale)", fontsize=9.5)
-    ax.set_title("D.  Both Habitats — Stock with Uncertainty", loc="left",
+    ax.set_xticklabels(["Seagrass\n(seq-rate SD)",
+                        "Macroalgae\n(transfer-function range)"], fontsize=9)
+    ax.set_ylabel("Annual sequestration (Mt CO₂ yr⁻¹, log scale)", fontsize=9.5)
+    ax.set_title("D.  Both Habitats — Sequestration with Uncertainty", loc="left",
                  fontweight="bold", fontsize=12)
     _clean(ax)
 
-    fig.suptitle("Norwegian Blue Carbon Stock: Estimates and Uncertainty",
-                 fontsize=14, fontweight="bold", y=0.985)
-    fig.text(0.5, 0.012,
-             f"Seagrass (A, B): non-parametric bootstrap ({BOOTSTRAP_N:,} resamples) of {len(site_vals)} site "
-             f"measurements (Gagnon 2024; Rohr 2018) × HB19 extent ({seagrass_extent_km2:.0f} km²); the wide CI "
-             "reflects few, highly variable sites (B). Orange line in A = Frigstad 2020 published value. "
-             "Macroalgae (C): national density from a literature transfer function (Krause-Jensen & Duarte 2016) — "
-             "no Norwegian field data, so it cannot be bootstrapped; range = mapped vs modelled extent. "
-             "D compares both habitats — note the two different uncertainty types (sampling CI vs extent range).",
-             fontsize=7.3, color="#666", ha="center", style="italic")
-    fig.subplots_adjust(left=0.08, right=0.97, top=0.91, bottom=0.13, hspace=0.42, wspace=0.22)
+    add_caption(
+        fig,
+        f"National blue-carbon stock estimates and their uncertainty. Seagrass uncertainty is sampling-driven: "
+        f"a non-parametric bootstrap ({BOOTSTRAP_N:,} resamples) of {len(site_vals)} site stock measurements "
+        f"(Gagnon 2024; Rohr 2018) × HB19 extent ({seagrass_extent_km2:.0f} km²) gives the national-stock CI (A); "
+        "the wide spread reflects few, highly variable sites (B). Orange line in A = Frigstad 2020 published stock. "
+        "Macroalgae has no Norwegian field stock data — its dominant uncertainty is the literature transfer "
+        f"function (Krause-Jensen & Duarte 2016 export/sequestration fraction {frac_lo:.0f}–{frac_hi:.0f}%, central "
+        f"{frac_mid:.1f}%; published literature range), shown on annual sequestration (C). D contrasts both habitats' "
+        "annual sequestration: the seagrass error is ±1.96 SD of the published sequestration rate (51 ± 14 g C m⁻² "
+        "yr⁻¹; TemaNord 2020:541) — not the stock bootstrap — and the macroalgae range is the transfer-function "
+        "spread from C.",
+        y=0.012, fontsize=9)
+    fig.subplots_adjust(left=0.08, right=0.97, top=0.95, bottom=0.16, hspace=0.42, wspace=0.22)
     fig.savefig(out, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -258,20 +301,24 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
 # ---------------------------------------------------------------------------
 def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> None:
     sg_color, ma_color = ECO_COLORS["seagrass"], ECO_COLORS["macroalgae"]
-    seagrass_extent_km2 = hb19[hb19["ecosystem"] == "seagrass"]["habitat_area_km2"].sum()
-    macroalgae_extent_km2 = hb19[hb19["ecosystem"] == "macroalgae"]["habitat_area_km2"].sum()
 
-    pooled_means = bootstrap_pooled_mean(sg["carbon_stock_g_m2"].values)
-    sg_kt_c = pooled_means * seagrass_extent_km2 * 1_000_000 / 1e9
-    sg_med = float(np.median(sg_kt_c))
-    sg_lo, sg_hi = (float(v) for v in np.percentile(sg_kt_c, [2.5, 97.5]))
-    sg_density_med = float(np.median(pooled_means))
+    # National carbon stocks from the published sources (Gg C), not a bootstrap:
+    #   seagrass   - Frigstad 2020 national estimate
+    #   macroalgae - Gundersen 2021 extent x Krause-Jensen & Duarte 2016 transfer fn
+    nat = load_national_seq().set_index("ecosystem")
+    sg_stock_gg = float(nat.loc["seagrass", "stock_gg_c"])
+    ma_stock_gg = float(nat.loc["macroalgae", "stock_gg_c"])
+    ma_stock_lo = float(nat.loc["macroalgae", "stock_mt_c_ci_low"]) * 1000.0
+    ma_stock_hi = float(nat.loc["macroalgae", "stock_mt_c_ci_high"]) * 1000.0
 
-    macroalgae_density_g_m2 = MACROALGAE_NATIONAL_STOCK_KT_C / MACROALGAE_EXTENT_KM2_GUNDERSEN * 1000.0
-    ma_kt_c = macroalgae_density_g_m2 * macroalgae_extent_km2 * 1_000_000 / 1e9
+    # Regional seagrass stock = regional mean sediment density (Gagnon 2024;
+    # Rohr 2018, by region) x HB19 mapped seagrass area for that region.
+    region_density = sg.groupby("canonical_region")["carbon_stock_g_m2"].mean()
+    region_area = (hb19[hb19["ecosystem"] == "seagrass"]
+                   .groupby("canonical_region")["habitat_area_km2"].sum())
 
     # Annual sequestration (Mt CO2/yr): seagrass Frigstad 2020; macroalgae Krause-Jensen
-    # export-fraction range 23-62% -> 1.32-4.11 Mt CO2/yr around a 1.7 median.
+    # export-fraction range 23-62% -> 1.3-4.1 Mt CO2/yr around a 1.7 central value.
     seq_sg_med, seq_sg_sd = 0.0168, 0.0046
     seq_ma_med = 1.7
     seq_ma_lo = 0.36 * 44 / 12
@@ -286,19 +333,20 @@ def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> None
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
-    # (A) National carbon stock
+    # (A) National carbon stock — published source values
     ax = axes[0, 0]
-    bars = ax.bar(eco, [sg_med, ma_kt_c],
-                  yerr=[[sg_med - sg_lo, 0.0], [sg_hi - sg_med, 0.0]],
-                  capsize=6, color=eco_cols, edgecolor="black", linewidth=0.6)
+    stocks = [sg_stock_gg, ma_stock_gg]
+    yerr = [[0.0, ma_stock_gg - ma_stock_lo], [0.0, ma_stock_hi - ma_stock_gg]]
+    bars = ax.bar(eco, stocks, yerr=yerr, capsize=6, color=eco_cols,
+                  edgecolor="black", linewidth=0.6)
     ax.set_yscale("log")
-    ax.set_ylim(top=ma_kt_c * 5)
+    ax.set_ylim(top=ma_stock_gg * 5)
     for b, lbl in zip(bars,
-                      [f"{sg_med:,.0f} kt C\n[{sg_lo:,.0f}–{sg_hi:,.0f}]",
-                       f"{ma_kt_c:,.0f} kt C\n(point est.)"]):
-        ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.3, lbl,
-                ha="center", va="bottom", fontsize=8.5)
-    ax.set_ylabel("Stored carbon (kt C, log scale)", fontsize=9.5)
+                      [f"{sg_stock_gg:,.0f} Gg C\n(Frigstad 2020)",
+                       f"{ma_stock_gg:,.0f} Gg C\n[{ma_stock_lo:,.0f}–{ma_stock_hi:,.0f}]"]):
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.35, lbl,
+                ha="center", va="bottom", fontsize=9)
+    ax.set_ylabel("Stored carbon (Gg C, log scale)", fontsize=9.5)
     ax.set_title("A.  National Carbon Stock", loc="left", fontweight="bold", fontsize=12)
     _clean(ax)
 
@@ -314,7 +362,7 @@ def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> None
     for i, (v, e, lbl) in enumerate(zip(
             seq_med, seq_hi_err,
             [f"{seq_sg_med:.3f}", f"{seq_ma_med:.2f}  [{seq_ma_lo:.2f}–{seq_ma_hi:.2f}]"])):
-        ax.text(i, (v + e) * 1.35, lbl, ha="center", va="bottom", fontsize=8.5)
+        ax.text(i, (v + e) * 1.35, lbl, ha="center", va="bottom", fontsize=9)
     ax.set_ylabel("Annual sequestration\n(Mt CO₂ yr⁻¹, log scale)", fontsize=9.5)
     ax.set_title("B.  Annual CO₂ Sequestration", loc="left", fontweight="bold", fontsize=12)
     _clean(ax)
@@ -338,50 +386,48 @@ def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> None
                linewidth=0.6, label=ecosystem.capitalize())
         for x, v in zip(pos + offset, vals):
             ax.text(x, v * 1.4, f"${v:,.0f}M" if v >= 1 else f"${v:.1f}M",
-                    ha="center", va="bottom", fontsize=7.5)
+                    ha="center", va="bottom", fontsize=9)
     ax.set_yscale("log")
     ax.set_ylim(0.15, max(all_vals) * 4)
     ax.set_xticks(pos)
-    ax.set_xticklabels(scen_labels, fontsize=8)
+    ax.set_xticklabels(scen_labels, fontsize=9)
     ax.set_ylabel("Annual value\n(M USD yr⁻¹, log scale)", fontsize=9.5)
     ax.set_title("C.  Annual Sequestration Value", loc="left", fontweight="bold", fontsize=12)
-    ax.legend(frameon=False, fontsize=8.5, loc="upper left")
+    ax.legend(frameon=False, fontsize=9, loc="upper left")
     _clean(ax)
 
-    # (D) Regional seagrass stock (macroalgae has no validated regional breakdown)
+    # (D) Regional seagrass stock = regional source density x HB19 mapped area
     ax = axes[1, 1]
-    reg = hb19[hb19["ecosystem"] == "seagrass"].copy()
-    reg["stock_kt_c"] = reg["habitat_area_km2"] * sg_density_med * 1_000_000 / 1e9
-    reg = reg.groupby("canonical_region")["stock_kt_c"].sum()
-    reg = reg.reindex([r for r in REGION_ORDER if r in reg.index])
-    xr = np.arange(len(reg))
-    ax.bar(xr, reg.values, width=0.6,
-           color=[REGION_COLORS.get(r, "#888") for r in reg.index],
+    regions = [r for r in REGION_ORDER if r in region_density.index]
+    reg_vals = [region_density[r] * region_area.get(r, 0.0) * 1_000_000 / 1e9
+                for r in regions]
+    xr = np.arange(len(regions))
+    ax.bar(xr, reg_vals, width=0.6,
+           color=[REGION_COLORS.get(r, "#888") for r in regions],
            edgecolor="black", linewidth=0.6)
-    for i, v in zip(xr, reg.values):
-        ax.text(i, v + max(reg.values) * 0.02, f"{v:,.0f}",
-                ha="center", va="bottom", fontsize=8.5)
+    for i, v in zip(xr, reg_vals):
+        ax.text(i, v + max(reg_vals) * 0.02, f"{v:,.1f}" if v < 10 else f"{v:,.0f}",
+                ha="center", va="bottom", fontsize=9)
     ax.set_xticks(xr)
-    ax.set_xticklabels([region_display(r) for r in reg.index], fontsize=8.5)
-    ax.set_ylim(0, max(reg.values) * 1.2)
-    ax.set_ylabel("Seagrass stock (kt C)", fontsize=9.5)
+    ax.set_xticklabels([region_display(r) for r in regions], fontsize=9)
+    ax.set_ylim(0, max(reg_vals) * 1.2)
+    ax.set_ylabel("Seagrass stock (Gg C)", fontsize=9.5)
     ax.set_title("D.  Regional Seagrass Stock", loc="left", fontweight="bold", fontsize=12)
-    ax.annotate("macroalgae: national estimate only\n(no validated regional breakdown)",
-                xy=(0.96, 0.96), xycoords="axes fraction", ha="right", va="top",
-                fontsize=7.5, style="italic", color="#777")
     _clean(ax)
 
-    fig.suptitle("Norwegian Blue Carbon Balance Sheet: Stock, Sequestration, and Value",
-                 fontsize=14, fontweight="bold", y=0.98)
-    fig.text(0.5, 0.012,
-             "Seagrass: bootstrap of 9 site measurements × HB19 extent (95% CI shown). "
-             "Macroalgae: Krause-Jensen & Duarte 2016 transfer function × Gundersen 2021 extent "
-             "(national point estimate; no Norwegian field data). "
-             "Sequestration: Frigstad 2020 (seagrass); Krause-Jensen export-fraction 23–62% (macroalgae). "
-             "Value (C) = annual CO₂ sequestration (B) × carbon price, in USD — "
-             "EU ETS 2024 (€65), US Social Cost of Carbon 2023 ($190), Voluntary blue-carbon ($20) per tCO₂.",
-             fontsize=7.3, color="#666", ha="center", style="italic")
-    fig.subplots_adjust(left=0.07, right=0.97, top=0.91, bottom=0.13, hspace=0.45, wspace=0.24)
+    add_caption(
+        fig,
+        "Norwegian blue-carbon balance sheet: stock, annual sequestration, and value. "
+        "National stocks (A) are published source values: seagrass 357.6 Gg C (Frigstad et al. 2020); "
+        "macroalgae 2,600 Gg C (Gundersen et al. 2021 × Krause-Jensen & Duarte 2016; 95% CI shown). "
+        "Regional seagrass stocks (D) = regional mean sediment density (Gagnon 2024; Rohr 2018) × HB19 mapped "
+        "area, and need not sum to the national total; Barents Sea and Norwegian Sea each rest on a single "
+        "measured site, so the low Barents value reflects one shallow, low-carbon site. "
+        "Sequestration (B): Frigstad 2020 (seagrass); Krause-Jensen export-fraction 23–62% (macroalgae). "
+        "Value (C) = annual CO₂ sequestration (B) × carbon price, in USD — "
+        "EU ETS 2024 (€65), US Social Cost of Carbon 2023 ($190), Voluntary blue-carbon ($20) per tCO₂.",
+        y=0.012, fontsize=9)
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.95, bottom=0.16, hspace=0.45, wspace=0.24)
     fig.savefig(out, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -430,6 +476,7 @@ def stats_csv(sg: pd.DataFrame, hb19: pd.DataFrame, bootstrap_summary: dict, out
 
 
 def main() -> None:
+    use_min_font()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     sg = load_seagrass_points()
     hb19 = load_hb19_extent()

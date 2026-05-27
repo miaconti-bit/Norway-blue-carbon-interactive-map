@@ -2,6 +2,6 @@ ecosystem,canonical_region,habitat_area_km2,stock_density_g_m2_median,stock_dens
 macroalgae,Barents Sea,1109.91,485.5,,,538.89,,,Krause-Jensen 2016 transfer function (no Norwegian field data)
 macroalgae,Norwegian Sea,3080.41,485.5,,,1495.63,,,Krause-Jensen 2016 transfer function (no Norwegian field data)
 macroalgae,Skagerrak,351.02,485.5,,,170.43,,,Krause-Jensen 2016 transfer function (no Norwegian field data)
-seagrass,Barents Sea,5.86,3570.9,1868.0,5260.1,20.92,10.94,30.81,non-parametric bootstrap of 9 site measurements
-seagrass,Norwegian Sea,17.23,3570.9,1868.0,5260.1,61.53,32.18,90.63,non-parametric bootstrap of 9 site measurements
-seagrass,Skagerrak,42.05,3570.9,1868.0,5260.1,150.14,78.54,221.16,non-parametric bootstrap of 9 site measurements
+seagrass,Barents Sea,5.86,3539.7,1878.6,5208.7,20.74,11.01,30.51,non-parametric bootstrap of 9 site measurements
+seagrass,Norwegian Sea,17.23,3539.7,1878.6,5208.7,60.99,32.37,89.74,non-parametric bootstrap of 9 site measurements
+seagrass,Skagerrak,42.05,3539.7,1878.6,5208.7,148.83,78.99,219.0,non-parametric bootstrap of 9 site measurements

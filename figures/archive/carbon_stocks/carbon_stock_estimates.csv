@@ -1,7 +1,0 @@
-ecosystem,canonical_region,habitat_area_km2,stock_density_g_m2_median,stock_density_g_m2_ci_low,stock_density_g_m2_ci_high,stock_kt_c_median,stock_kt_c_ci_low,stock_kt_c_ci_high,uncertainty_source
-macroalgae,Barents Sea,1109.91,485.5,,,538.89,,,Krause-Jensen 2016 transfer function (no Norwegian field data)
-macroalgae,Norwegian Sea,3080.41,485.5,,,1495.63,,,Krause-Jensen 2016 transfer function (no Norwegian field data)
-macroalgae,Skagerrak,351.02,485.5,,,170.43,,,Krause-Jensen 2016 transfer function (no Norwegian field data)
-seagrass,Barents Sea,5.86,3550.9,1850.0,5260.8,20.8,10.84,30.82,non-parametric bootstrap of 9 site measurements
-seagrass,Norwegian Sea,17.23,3550.9,1850.0,5260.8,61.18,31.88,90.64,non-parametric bootstrap of 9 site measurements
-seagrass,Skagerrak,42.05,3550.9,1850.0,5260.8,149.3,77.79,221.19,non-parametric bootstrap of 9 site measurements
