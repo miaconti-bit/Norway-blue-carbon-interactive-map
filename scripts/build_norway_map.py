@@ -1,8 +1,8 @@
 """Generate an interactive study-site map of Norwegian kelp + seagrass sites.
 
 Inputs:
-  - data/Norway_Macroalgae_Database.xlsm        (Site_Level sheet)
-  - data/Norway_Seagrass_ Master_Database (4).xlsx  (Site level sheet)
+  - databases/Norway_Macroalgae_Master_Database.xlsm   (Site_Level sheet)
+  - databases/Norway_Seagrass_ Master_Database.xlsx     (Site level sheet)
 
 Output:
   - maps/norway.html (self-contained Leaflet map via Folium)
@@ -51,8 +51,8 @@ TEMPLATES_DIR = Path(__file__).resolve().parent / "mia_map" / "templates"
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-KELP_PATH = REPO_ROOT / "data" / "Norway_Macroalgae_Database.xlsm"
-SEAGRASS_PATH = REPO_ROOT / "data" / "Norway_Seagrass_ Master_Database (4).xlsx"
+KELP_PATH = REPO_ROOT / "databases" / "Norway_Macroalgae_Master_Database.xlsm"
+SEAGRASS_PATH = REPO_ROOT / "databases" / "Norway_Seagrass_ Master_Database.xlsx"
 OUT_PATH = REPO_ROOT / "maps" / "norway.html"
 # Second output: copied into docs/ so GitHub Pages serves it directly
 # (replaces the prior Netlify deployment). docs/index.html links to this file.

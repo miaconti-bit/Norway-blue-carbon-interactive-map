@@ -17,7 +17,7 @@ site, capturing within-site sediment heterogeneity. Biomass and temperature
 are site-level properties, so those panels use one mean per site.
 
 Input:
-  data/Norway_Seagrass_ Master_Database (4).xlsx  — "Site level" sheet
+  databases/Norway_Seagrass_ Master_Database.xlsx  — "Site level" sheet
 
 Output:
   figures/figure_environmental_drivers.png
@@ -36,7 +36,7 @@ from scipy import stats
 from figure_style import add_caption, use_min_font
 
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "data" / "Norway_Seagrass_ Master_Database (4).xlsx"
+DB_PATH = ROOT / "databases" / "Norway_Seagrass_ Master_Database.xlsx"
 FIG_DIR = ROOT / "figures"
 FIG_DIR.mkdir(exist_ok=True)
 

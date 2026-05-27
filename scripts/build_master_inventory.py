@@ -26,8 +26,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = REPO_ROOT / "data"
 OUT_DIR = RAW_DIR / "processed"
 
-KELP_PATH = RAW_DIR / "Norway_Macroalgae_Database.xlsm"
-SEAGRASS_PATH = RAW_DIR / "Norway_Seagrass_ Master_Database (4).xlsx"
+KELP_PATH = REPO_ROOT / "databases" / "Norway_Macroalgae_Master_Database.xlsm"
+SEAGRASS_PATH = REPO_ROOT / "databases" / "Norway_Seagrass_ Master_Database.xlsx"
 
 SITES_OUT = OUT_DIR / "norway_blue_carbon_master_sites.csv"
 OBS_OUT = OUT_DIR / "norway_blue_carbon_observations.csv"

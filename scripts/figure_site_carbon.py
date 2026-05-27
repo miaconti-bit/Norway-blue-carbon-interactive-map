@@ -10,7 +10,7 @@ Panel B: Eelgrass vs unvegetated sediment carbon comparison using per-core
          store more carbon than adjacent bare sediments.
 
 Inputs:
-  data/Norway_Seagrass_ Master_Database (4).xlsx  — "Site level"
+  databases/Norway_Seagrass_ Master_Database.xlsx  — "Site level"
   data/Gagnon 2024 s1 carbon.xlsx                 — "Data-cores"
 
 Output:
@@ -31,7 +31,7 @@ from scipy import stats
 from figure_style import add_caption, use_min_font
 
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "data" / "Norway_Seagrass_ Master_Database (4).xlsx"
+DB_PATH = ROOT / "databases" / "Norway_Seagrass_ Master_Database.xlsx"
 CARBON_PATH = ROOT / "data" / "carbon stocks norway paper data.xlsx"
 FIG_DIR = ROOT / "figures"
 FIG_DIR.mkdir(exist_ok=True)
