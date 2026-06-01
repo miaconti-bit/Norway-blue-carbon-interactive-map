@@ -145,8 +145,12 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
     sg_color, ma_color, dark, pub_color = (
         ECO_COLORS["seagrass"], ECO_COLORS["macroalgae"], "#1b5e20", "#b3541e")
 
-    # Seagrass: bootstrap the site densities, scale by HB19 extent -> national stock.
-    seagrass_extent_km2 = hb19[hb19["ecosystem"] == "seagrass"]["habitat_area_km2"].sum()
+    # Seagrass: bootstrap the site densities, scale by Frigstad 2020 national
+    # modeled extent (90 km²) -> national stock. Frigstad's headline 245 Gg C
+    # uses the same 90 km² basis, so this keeps the bootstrap on the same
+    # extent footing as the published national estimate. HB19 (~65 km²) is
+    # the mapped/surveyed area, which would undercount national stock.
+    seagrass_extent_km2 = SEAGRASS_EXTENT_KM2_MODELED
     site_vals = sg["carbon_stock_g_m2"].values
     pooled_means = bootstrap_pooled_mean(site_vals)
     national_kt_c = pooled_means * seagrass_extent_km2 * 1_000_000 / 1e9
@@ -283,7 +287,8 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
     add_caption(
         fig,
         f"(A) Non-parametric bootstrap ({BOOTSTRAP_N:,} resamples) of {len(site_vals)} site sediment-stock "
-        f"measurements (Gagnon 2024; Rohr 2018) × HB19 extent ({seagrass_extent_km2:.0f} km²). "
+        f"measurements (Gagnon 2024; Rohr 2018) × Frigstad 2020 national modeled extent "
+        f"({seagrass_extent_km2:.0f} km²). "
         "(B) Site data spread driving the bootstrap CI. "
         f"(C) Macroalgae sequestration governed by Krause-Jensen & Duarte 2016 export fraction "
         f"({frac_lo:.0f}–{frac_hi:.0f}%, central {frac_mid:.1f}%); the living-biomass C pool itself is "
@@ -369,14 +374,15 @@ def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame,
                 lbl, ha="center", va="bottom", fontsize=8.5)
     # Single alternative-reference line: Gundersen × KJD areal estimate for
     # macroalgae (the only one not already encoded by the primary Frigstad
-    # bars). Placed only over bar 1.
+    # bars). Placed only over bar 1; label sits to the LEFT of the bar so it
+    # doesn't bleed into panel B.
     bar1_x = bars[1].get_x()
     bar1_w = bars[1].get_width()
     ax.hlines(ma_alt_gg, bar1_x - 0.04, bar1_x + bar1_w + 0.04,
               color=pub_color, linewidth=1.6, linestyle="--")
-    ax.text(bar1_x + bar1_w + 0.06, ma_alt_gg,
-            f"Gundersen × KJD  ({ma_alt_gg:,.0f} Gg C; alt.)",
-            va="center", ha="left", fontsize=8, color=pub_color)
+    ax.text(bar1_x - 0.06, ma_alt_gg,
+            f"Gundersen × KJD\n({ma_alt_gg:,.0f} Gg C; alt.)",
+            va="center", ha="right", fontsize=8, color=pub_color)
     ax.set_ylabel("Carbon pool (Gg C, log scale)", fontsize=9.5)
     ax.set_title("A.  National Carbon Pool  (sediment vs. living biomass)",
                  loc="left", fontweight="bold", fontsize=12)
