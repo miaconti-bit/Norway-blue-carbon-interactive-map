@@ -19,8 +19,8 @@ Reads:
   data/processed/spatial_analysis/regional_colocation_summary.csv
 
 Writes to figures/:
-  fig09_seagrass_bootstrap.png
-  fig11_carbon_balance_sheet.png
+  seagrass_bootstrap.png
+  carbon_balance_sheet.png
   carbon_stock_estimates.csv
 
 Run:
@@ -172,46 +172,23 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
     fig, axes = plt.subplots(2, 2, figsize=(13, 9.5))
     xs = np.arange(2)
 
-    # (A) Seagrass bootstrap distribution.
-    # Two independent published benchmarks shown as reference lines: Frigstad
-    # 2020 Table 8 (245 Gg C; 90 km² × ~2,722 g C m⁻² Nordic-weighted, top 25 cm)
-    # and Gagnon 2024 Nordic-weighted national estimate (250 Gg C, range 60–400).
-    # The bootstrap (this study) is the headline; the references show three-way
-    # triangulation at ~0.23–0.25 Mt C.
+    # (A) Seagrass bootstrap distribution. Headline only — independent
+    # benchmarks (Frigstad / Gagnon Nordic-weighted) discussed in the report
+    # text rather than overlaid here.
     ax = axes[0, 0]
     ax.hist(national_kt_c, bins=40, color=sg_color, alpha=0.85,
             edgecolor="white", linewidth=0.4)
-    ymax_a = ax.get_ylim()[1]
     ax.axvspan(ci_low, ci_high, color=sg_color, alpha=0.18, zorder=0)
     ax.axvline(median, color=dark, linewidth=2.0)
     for v in (ci_low, ci_high):
         ax.axvline(v, color=dark, linestyle="--", linewidth=1.2)
-    # Gagnon Nordic-weighted range as a faint shaded band; Frigstad + Gagnon
-    # central estimates as thin reference lines (they fall ~5 Gg C apart).
-    gag_lo, gag_hi = SEAGRASS_STOCK_GAGNON_RANGE_GG_C
-    ax.axvspan(gag_lo, gag_hi, color=pub_color, alpha=0.07, zorder=0)
-    ax.axvline(SEAGRASS_STOCK_FRIGSTAD_GG_C, color=pub_color,
-               linewidth=1.4, linestyle=":")
-    ax.axvline(SEAGRASS_STOCK_GAGNON_GG_C, color=pub_color,
-               linewidth=1.4, linestyle="--")
-    ax.set_xlim(right=max(float(national_kt_c.max()),
-                          SEAGRASS_STOCK_GAGNON_RANGE_GG_C[1]) * 1.04)
+    ax.set_xlim(right=float(national_kt_c.max()) * 1.04)
     ax.text(0.03, 0.97,
-            f"{median:,.0f} Gg C  (this bootstrap)\n95% CI  {ci_low:,.0f}–{ci_high:,.0f}\n"
+            f"{median:,.0f} Gg C\n95% CI  {ci_low:,.0f}–{ci_high:,.0f}\n"
             f"(± {(ci_high - ci_low) / 2 / median * 100:.0f}%)",
             transform=ax.transAxes, va="top", ha="left", fontsize=11,
             fontweight="bold", color=dark,
             bbox=dict(facecolor="white", edgecolor=dark, boxstyle="round,pad=0.5", linewidth=1.0))
-    # Reference-line labels stacked top-right so they don't collide with the headline box.
-    ax.text(0.97, 0.97,
-            f"Independent references\n"
-            f"Frigstad 2020 (Table 8): {SEAGRASS_STOCK_FRIGSTAD_GG_C:.0f} Gg C\n"
-            f"Gagnon 2024 (Nordic-wtd): {SEAGRASS_STOCK_GAGNON_GG_C:.0f} Gg C "
-            f"[{gag_lo:.0f}–{gag_hi:.0f}]",
-            transform=ax.transAxes, va="top", ha="right", fontsize=8.5,
-            color=pub_color,
-            bbox=dict(facecolor="white", edgecolor=pub_color,
-                      boxstyle="round,pad=0.4", linewidth=0.8))
     ax.set_xlabel("National seagrass sediment stock (Gg C)", fontsize=9.5)
     ax.set_ylabel("Bootstrap resamples", fontsize=9.5)
     ax.set_title("A.  Seagrass — Bootstrap Estimate", loc="left",
@@ -270,13 +247,9 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
     ax.set_xlabel("Annual CO₂ sequestration (Mt CO₂ yr⁻¹)", fontsize=9.5)
     ax.set_title("C.  Macroalgae — Transfer-Function Spread", loc="left",
                  fontweight="bold", fontsize=12)
-    ax.text(0.5, 0.99,
-            "Living-biomass C is the standing pool, not sediment carbon; published national\n"
-            "totals range from 2,600 Gg C (Gundersen × KJD) to 5,896 Gg C (Frigstad 2020) —\n"
-            "different area / density assumptions, not reconcilable. The export / sequestration\n"
-            "fraction (Krause-Jensen & Duarte 2016, central 25.5%, range 23–62%) is the\n"
-            "dominant transfer-function unknown and drives the spread shown below.",
-            transform=ax.transAxes, va="top", ha="center", fontsize=8.5, color="#555")
+    # In-panel commentary removed — keeping the panel visually clean; the
+    # transfer-function range and living-biomass attribution are summarized
+    # in the figure footnote and discussed in the report text.
     ax.spines["left"].set_visible(False)
     _clean(ax)
 
@@ -309,23 +282,17 @@ def fig09_bootstrap(sg: pd.DataFrame, hb19: pd.DataFrame, out: Path) -> dict:
 
     add_caption(
         fig,
-        f"National blue-carbon stock estimates and their uncertainty. Seagrass uncertainty is sampling-driven: "
-        f"a non-parametric bootstrap ({BOOTSTRAP_N:,} resamples) of {len(site_vals)} site sediment-stock "
-        f"measurements (Gagnon 2024; Rohr 2018) × HB19 extent ({seagrass_extent_km2:.0f} km²) gives the "
-        f"national-stock CI (A). Dotted / dashed orange lines in A are two independent published references: "
-        f"Frigstad 2020 Table 8 ({SEAGRASS_STOCK_FRIGSTAD_GG_C:.0f} Gg C; 90 km² × Nordic-weighted density, top "
-        f"25 cm) and Gagnon 2024 Nordic-weighted national estimate ({SEAGRASS_STOCK_GAGNON_GG_C:.0f} Gg C, range "
-        f"{SEAGRASS_STOCK_GAGNON_RANGE_GG_C[0]:.0f}–{SEAGRASS_STOCK_GAGNON_RANGE_GG_C[1]:.0f}; faint shaded band). "
-        "All three converge at ~0.23–0.25 Mt C; the wide bootstrap spread reflects few, highly variable sites (B). "
-        "Macroalgae has no Norwegian sediment-stock field data — published living-biomass C totals differ between "
-        f"sources (Frigstad 2020: {MACROALGAE_LIVING_BIOMASS_FRIGSTAD_GG_C:,.0f} Gg C; Gundersen × KJD: "
-        f"{MACROALGAE_LIVING_BIOMASS_GUNDERSEN_GG_C:,.0f} Gg C), and the dominant transfer-function uncertainty is "
-        f"the export / sequestration fraction (Krause-Jensen & Duarte 2016, {frac_lo:.0f}–{frac_hi:.0f}%, central "
-        f"{frac_mid:.1f}%), shown on annual sequestration (C). D contrasts both habitats' annual sequestration: "
-        "the seagrass error is ±1.96 SD of the published sequestration rate (51 ± 14 g C m⁻² yr⁻¹; TemaNord "
-        "2020:541) — not the stock bootstrap — and the macroalgae range is the transfer-function spread from C.",
-        y=0.012, fontsize=9)
-    fig.subplots_adjust(left=0.08, right=0.97, top=0.95, bottom=0.16, hspace=0.42, wspace=0.22)
+        f"(A) Non-parametric bootstrap ({BOOTSTRAP_N:,} resamples) of {len(site_vals)} site sediment-stock "
+        f"measurements (Gagnon 2024; Rohr 2018) × HB19 extent ({seagrass_extent_km2:.0f} km²). "
+        "(B) Site data spread driving the bootstrap CI. "
+        f"(C) Macroalgae sequestration governed by Krause-Jensen & Duarte 2016 export fraction "
+        f"({frac_lo:.0f}–{frac_hi:.0f}%, central {frac_mid:.1f}%); the living-biomass C pool itself is "
+        f"source-dependent (Frigstad 2020: {MACROALGAE_LIVING_BIOMASS_FRIGSTAD_GG_C:,.0f} Gg C; "
+        f"Gundersen × KJD: {MACROALGAE_LIVING_BIOMASS_GUNDERSEN_GG_C:,.0f} Gg C). "
+        "(D) Annual sequestration with the two uncertainty types side-by-side: seagrass ±1.96 SD of the "
+        "TemaNord 2020:541 rate; macroalgae the transfer-function range from C.",
+        y=0.04, fontsize=10)
+    fig.subplots_adjust(left=0.08, right=0.97, top=0.95, bottom=0.20, hspace=0.42, wspace=0.22)
     fig.savefig(out, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -345,18 +312,15 @@ def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame,
     sg_color, ma_color = ECO_COLORS["seagrass"], ECO_COLORS["macroalgae"]
     pub_color, dark = "#b3541e", "#1b5e20"
 
-    # National carbon-pool headlines (Gg C):
-    #   seagrass   - SEDIMENT stock from this study's bootstrap (Gagnon 2024;
-    #                Rohr 2018 × HB19 extent), with Frigstad 2020 Table 8
-    #                (245) and Gagnon 2024 Nordic-weighted (250 [60-400])
-    #                shown as independent triangulation.
-    #   macroalgae - LIVING BIOMASS C, not sediment stock. Frigstad 2020 is the
-    #                primary headline (kelp 4,969 + rockweed 927 = 5,896 Gg C);
-    #                Gundersen × KJD areal (2,600 Gg C) is a non-reconcilable
-    #                alternative based on different area + density assumptions.
-    sg_stock_gg = float(bootstrap_summary["pooled_median_kt_c"])
-    sg_stock_lo = float(bootstrap_summary["pooled_ci_low"])
-    sg_stock_hi = float(bootstrap_summary["pooled_ci_high"])
+    # National carbon-pool headlines (Gg C). This figure precedes the bootstrap
+    # in the report, so published source values are used as the primary numbers:
+    #   seagrass   - SEDIMENT stock from Frigstad 2020 Table 8 (245 Gg C;
+    #                90 km² × Nordic-weighted density, top 25 cm).
+    #   macroalgae - LIVING BIOMASS C from Frigstad 2020 (5,896 Gg C = kelp
+    #                4,969 + rockweed 927). Gundersen × KJD areal alternative
+    #                (2,600 Gg C, different area + density assumptions) shown
+    #                as a reference line.
+    sg_stock_gg = SEAGRASS_STOCK_FRIGSTAD_GG_C
     ma_stock_gg = MACROALGAE_LIVING_BIOMASS_FRIGSTAD_GG_C
     ma_alt_gg = MACROALGAE_LIVING_BIOMASS_GUNDERSEN_GG_C
     nat = load_national_seq().set_index("ecosystem")
@@ -389,50 +353,30 @@ def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame,
     # (annual turnover pool). The panel title and labels say so explicitly.
     ax = axes[0, 0]
     stocks = [sg_stock_gg, ma_stock_gg]
-    yerr = [[sg_stock_gg - sg_stock_lo, 0.0], [sg_stock_hi - sg_stock_gg, 0.0]]
-    bars = ax.bar(eco, stocks, yerr=yerr, capsize=6, color=eco_cols,
-                  edgecolor="black", linewidth=0.6,
-                  error_kw=dict(elinewidth=1.4, capthick=1.4, ecolor="#333"))
+    bars = ax.bar(eco, stocks, color=eco_cols, edgecolor="black", linewidth=0.6)
     ax.set_yscale("log")
-    ax.set_ylim(top=ma_stock_gg * 6)
-    # Bar value labels: bootstrap headline for seagrass; Frigstad breakdown for macroalgae.
+    ax.set_ylim(top=ma_stock_gg * 8)
     labels = [
-        (f"{sg_stock_gg:,.0f} Gg C  (this bootstrap)\n"
-         f"95% CI  {sg_stock_lo:,.0f}–{sg_stock_hi:,.0f}\n"
+        (f"{sg_stock_gg:,.0f} Gg C  (Frigstad 2020)\n"
          f"Sediment stock"),
         (f"{ma_stock_gg:,.0f} Gg C  (Frigstad 2020)\n"
          f"kelp {MACROALGAE_LIVING_BIOMASS_KELP_GG_C:,.0f} + rockweed "
          f"{MACROALGAE_LIVING_BIOMASS_ROCKWEED_GG_C:,.0f}\n"
          f"Living biomass"),
     ]
-    label_tops = [sg_stock_hi, ma_stock_gg]
-    for b, lbl, top in zip(bars, labels, label_tops):
-        ax.text(b.get_x() + b.get_width() / 2, top * 1.35,
+    for b, lbl in zip(bars, labels):
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.35,
                 lbl, ha="center", va="bottom", fontsize=8.5)
-    # Independent reference lines: Frigstad/Gagnon for seagrass (just above
-    # bar 0); Gundersen × KJD alternative for macroalgae (just above bar 1).
-    bar0_x = bars[0].get_x()
-    bar0_w = bars[0].get_width()
-    ax.hlines(SEAGRASS_STOCK_FRIGSTAD_GG_C,
-              bar0_x - 0.03, bar0_x + bar0_w + 0.03,
-              color=pub_color, linewidth=1.4, linestyle=":")
-    ax.hlines(SEAGRASS_STOCK_GAGNON_GG_C,
-              bar0_x - 0.03, bar0_x + bar0_w + 0.03,
-              color=pub_color, linewidth=1.4, linestyle="--")
+    # Single alternative-reference line: Gundersen × KJD areal estimate for
+    # macroalgae (the only one not already encoded by the primary Frigstad
+    # bars). Placed only over bar 1.
     bar1_x = bars[1].get_x()
     bar1_w = bars[1].get_width()
-    ax.hlines(ma_alt_gg, bar1_x - 0.03, bar1_x + bar1_w + 0.03,
-              color=pub_color, linewidth=1.4, linestyle="--")
-    # Anchored legend describing the three reference lines (white box, mid-left
-    # so it sits between the two bars without overlapping either).
-    ax.text(0.5, 0.05,
-            f"··· Frigstad 2020 ({SEAGRASS_STOCK_FRIGSTAD_GG_C:.0f})\n"
-            f"– – Gagnon 2024 Nordic-wtd ({SEAGRASS_STOCK_GAGNON_GG_C:.0f})\n"
-            f"– – Gundersen × KJD ({ma_alt_gg:,.0f}; alt. macroalgae)",
-            transform=ax.transAxes, va="bottom", ha="center",
-            fontsize=7.5, color=pub_color,
-            bbox=dict(facecolor="white", edgecolor=pub_color,
-                      boxstyle="round,pad=0.35", linewidth=0.6))
+    ax.hlines(ma_alt_gg, bar1_x - 0.04, bar1_x + bar1_w + 0.04,
+              color=pub_color, linewidth=1.6, linestyle="--")
+    ax.text(bar1_x + bar1_w + 0.06, ma_alt_gg,
+            f"Gundersen × KJD  ({ma_alt_gg:,.0f} Gg C; alt.)",
+            va="center", ha="left", fontsize=8, color=pub_color)
     ax.set_ylabel("Carbon pool (Gg C, log scale)", fontsize=9.5)
     ax.set_title("A.  National Carbon Pool  (sediment vs. living biomass)",
                  loc="left", fontweight="bold", fontsize=12)
@@ -505,22 +449,16 @@ def fig11_balance_sheet(sg: pd.DataFrame, hb19: pd.DataFrame,
 
     add_caption(
         fig,
-        "Norwegian blue-carbon balance sheet: carbon pool, annual sequestration, and value. "
-        "Panel A bars are different carbon types and not directly comparable: seagrass = sediment stock "
-        f"({sg_stock_gg:,.0f} Gg C, this bootstrap; 95% CI {sg_stock_lo:,.0f}–{sg_stock_hi:,.0f}), with "
-        f"Frigstad 2020 Table 8 ({SEAGRASS_STOCK_FRIGSTAD_GG_C:.0f} Gg C; dotted) and Gagnon 2024 Nordic-weighted "
-        f"({SEAGRASS_STOCK_GAGNON_GG_C:.0f} Gg C; dashed) as independent references — three-way triangulation "
-        f"at ~0.23–0.25 Mt C. Macroalgae = living biomass C ({ma_stock_gg:,.0f} Gg C, Frigstad 2020: kelp "
-        f"{MACROALGAE_LIVING_BIOMASS_KELP_GG_C:,.0f} + rockweed {MACROALGAE_LIVING_BIOMASS_ROCKWEED_GG_C:,.0f}); "
-        f"Gundersen 2021 × KJD areal alternative ({ma_alt_gg:,.0f} Gg C; dashed) uses different area + density "
-        "assumptions and is not reconcilable with Frigstad. Regional seagrass stocks (D) = regional mean sediment "
-        "density (Gagnon 2024; Rohr 2018) × HB19 mapped area, and need not sum to the national total; Barents Sea "
-        "and Norwegian Sea each rest on a single measured site, so the low Barents value reflects one shallow, "
-        "low-carbon site. Sequestration (B): TemaNord 2020:541 (seagrass); Krause-Jensen export-fraction 23–62% "
-        "(macroalgae). Value (C) = annual CO₂ sequestration (B) × carbon price, in USD — EU ETS 2024 (€65), "
-        "US Social Cost of Carbon 2023 ($190), Voluntary blue-carbon ($20) per tCO₂.",
-        y=0.012, fontsize=9)
-    fig.subplots_adjust(left=0.07, right=0.97, top=0.95, bottom=0.16, hspace=0.45, wspace=0.24)
+        "(A) Bars are different carbon types and not directly comparable: seagrass = sediment stock "
+        f"(Frigstad 2020 Table 8); macroalgae = living biomass C (Frigstad 2020). Gundersen × KJD areal "
+        f"alternative ({ma_alt_gg:,.0f} Gg C) shown for context. "
+        "(B) Sequestration: TemaNord 2020:541 (seagrass); Krause-Jensen export-fraction 23–62% (macroalgae). "
+        "(C) Annual sequestration × carbon price: EU ETS 2024 (€65), Social Cost of Carbon 2023 ($190), "
+        "Voluntary blue-carbon ($20) per tCO₂. "
+        "(D) Regional mean sediment density (Gagnon 2024; Rohr 2018) × HB19 mapped area; need not sum to the "
+        "national total. Barents and Norwegian Sea each rest on a single site.",
+        y=0.04, fontsize=10)
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.95, bottom=0.20, hspace=0.45, wspace=0.24)
     fig.savefig(out, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -582,9 +520,9 @@ def main() -> None:
     print(f"HB19 seagrass extent: {hb19[hb19['ecosystem']=='seagrass']['habitat_area_km2'].sum():.1f} km^2")
     print(f"HB19 macroalgae extent: {hb19[hb19['ecosystem']=='macroalgae']['habitat_area_km2'].sum():.1f} km^2")
 
-    bootstrap_summary = fig09_bootstrap(sg, hb19, OUT_DIR / "fig09_seagrass_bootstrap.png")
+    bootstrap_summary = fig09_bootstrap(sg, hb19, OUT_DIR / "seagrass_bootstrap.png")
     fig11_balance_sheet(sg, hb19, bootstrap_summary,
-                        OUT_DIR / "fig11_carbon_balance_sheet.png")
+                        OUT_DIR / "carbon_balance_sheet.png")
     stats_csv(sg, hb19, bootstrap_summary, OUT_DIR / "carbon_stock_estimates.csv")
 
     print("\nBootstrap summary:")
